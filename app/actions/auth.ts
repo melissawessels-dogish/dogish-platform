@@ -34,13 +34,18 @@ export async function signIn(prevState: AuthState, formData: FormData): Promise<
 export async function signUp(prevState: AuthState, formData: FormData): Promise<AuthState> {
   const supabase = await createClient()
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: formData.get('email') as string,
     password: formData.get('password') as string,
   })
 
   if (error) {
     return { error: error.message }
+  }
+
+  // Session is immediately active — email confirmation is disabled
+  if (data.session) {
+    redirect('/onboarding/profile')
   }
 
   return { message: 'Check your email for a confirmation link.' }

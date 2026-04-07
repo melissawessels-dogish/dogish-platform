@@ -11,14 +11,43 @@ import {
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
-  signIn,
+  signUp,
   signInWithApple,
   signInWithGoogle,
   signInWithFacebook,
 } from '@/app/actions/auth'
 
-export function LoginForm() {
-  const [state, action, pending] = useActionState(signIn, null)
+export function SignupForm() {
+  const [state, action, pending] = useActionState(signUp, null)
+
+  if (state?.message) {
+    return (
+      <div className="grid min-h-svh lg:grid-cols-2">
+        <div className="flex flex-col items-center justify-center gap-4 p-8 text-center bg-white">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0F2240]/10">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="2">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-[#0F2240]">Check your email</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{state.message}</p>
+          </div>
+        </div>
+        <div className="relative hidden lg:block" style={{ backgroundColor: '#0F2240' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/dogish-login-image-3.jpg"
+            alt="Golden retriever"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute bottom-6 left-6">
+            <p className="text-2xl font-bold text-[#0F2240]">Social. Local. Dog-Obsessed.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
@@ -34,9 +63,9 @@ export function LoginForm() {
           <form action={action}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">Welcome back!</h1>
+                <h1 className="text-2xl font-bold">Create your account</h1>
                 <p className="text-balance text-muted-foreground">
-                  Sign in to your dogish account.
+                  Join the social network for dogs.
                 </p>
               </div>
               {state?.error && (
@@ -55,16 +84,9 @@ export function LoginForm() {
                 />
               </Field>
               <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-2 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
-                </div>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
                 <Input id="password" name="password" type="password" required />
+                <FieldDescription>Must be at least 8 characters long.</FieldDescription>
               </Field>
               <Field>
                 <Button
@@ -72,7 +94,7 @@ export function LoginForm() {
                   disabled={pending}
                   style={{ backgroundColor: '#0F2240' }}
                 >
-                  {pending ? 'Signing in…' : 'Sign in'}
+                  {pending ? 'Creating account…' : 'Create account'}
                 </Button>
               </Field>
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-white">
@@ -90,7 +112,7 @@ export function LoginForm() {
                       fill="currentColor"
                     />
                   </svg>
-                  <span className="sr-only">Login with Apple</span>
+                  <span className="sr-only">Sign up with Apple</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -103,7 +125,7 @@ export function LoginForm() {
                       fill="currentColor"
                     />
                   </svg>
-                  <span className="sr-only">Login with Google</span>
+                  <span className="sr-only">Sign up with Google</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -116,13 +138,13 @@ export function LoginForm() {
                       fill="currentColor"
                     />
                   </svg>
-                  <span className="sr-only">Login with Meta</span>
+                  <span className="sr-only">Sign up with Meta</span>
                 </Button>
               </Field>
               <FieldDescription className="text-center">
-                Don&apos;t have an account?{' '}
-                <a href="/signup" className="underline-offset-2 hover:underline">
-                  Sign up
+                Already have an account?{' '}
+                <a href="/login" className="underline-offset-2 hover:underline">
+                  Sign in
                 </a>
               </FieldDescription>
             </FieldGroup>
