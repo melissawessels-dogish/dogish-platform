@@ -31,7 +31,6 @@ interface FormData {
   personalityTags: string[]
   allergies: string[]
   allergyInput: string
-  location: string
   isPrivate: boolean
 }
 
@@ -298,6 +297,7 @@ export default function NewDogPage() {
   const [error, setError] = useState<string | null>(null)
   const [createdDogId, setCreatedDogId] = useState<string | null>(null)
   const [humanProfile, setHumanProfile] = useState<{ display_name: string | null; avatar: string | null } | null>(null)
+  const [allDogs, setAllDogs] = useState<{ id: string; name: string; avatar: string | null }[]>([])
 
   const [form, setForm] = useState<FormData>({
     name: '',
@@ -312,7 +312,6 @@ export default function NewDogPage() {
     personalityTags: [],
     allergies: [],
     allergyInput: '',
-    location: '',
     isPrivate: false,
   })
 
@@ -395,7 +394,6 @@ export default function NewDogPage() {
           size: form.size || null,
           sex: form.sex,
           bio: form.bio.trim() || null,
-          location: form.location.trim() || null,
           allergies: form.allergies.length > 0 ? form.allergies : null,
           personality_tags: form.personalityTags.length > 0 ? form.personalityTags : null,
           mix_description: form.mixDescription.trim() || null,
@@ -423,6 +421,13 @@ export default function NewDogPage() {
         .eq('id', user.id)
         .single()
       setHumanProfile(human)
+
+      const { data: dogs } = await supabase
+        .from('dog')
+        .select('id, name, avatar')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: true })
+      setAllDogs(dogs ?? [])
 
       setCreatedDogId(dog.id)
       setStep(TOTAL_STEPS - 1)
@@ -607,20 +612,9 @@ export default function NewDogPage() {
                 </div>
               )}
 
-              {/* Step 2 — location & privacy */}
+              {/* Step 2 — privacy */}
               {step === 2 && (
                 <div className="flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="space-y-1.5">
-                    <Label className="text-[#0F2240] font-medium text-sm">Location</Label>
-                    <Input
-                      placeholder="City, State"
-                      value={form.location}
-                      onChange={(e) => update({ location: e.target.value })}
-                      className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
-                    />
-                    <p className="text-xs text-[#0F2240]/40">Used for local place recommendations. Never shown precisely.</p>
-                  </div>
-
                   <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#F7F3EE] border border-[#0F2240]/10">
                     <div>
                       <p className="text-sm font-medium text-[#0F2240]">Private profile</p>
@@ -646,8 +640,8 @@ export default function NewDogPage() {
               {/* Step 3 — success */}
               {step === TOTAL_STEPS - 1 && createdDogId && (
                 <div className="flex flex-col items-center justify-center flex-1 gap-6 py-8 text-center animate-in fade-in zoom-in-95 duration-500">
-                  {/* Dual avatars */}
-                  <div className="flex items-center gap-3">
+                  {/* Avatars: human + all dogs */}
+                  <div className="flex items-center gap-3 flex-wrap justify-center">
                     <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg bg-[#EDE3D6] flex items-center justify-center shrink-0">
                       {humanProfile?.avatar ? (
                         <Image src={humanProfile.avatar} alt={humanProfile.display_name ?? 'You'} fill className="object-cover" />
@@ -655,19 +649,30 @@ export default function NewDogPage() {
                         <span className="text-3xl">🧑</span>
                       )}
                     </div>
-                    <span className="text-2xl font-bold text-[#0F2240]/30">+</span>
-                    <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg bg-[#EDE3D6] flex items-center justify-center shrink-0">
-                      {form.avatarPreview ? (
-                        <Image src={form.avatarPreview} alt={form.name} fill className="object-cover" />
-                      ) : (
-                        <span className="text-3xl">🐾</span>
-                      )}
-                    </div>
+                    {allDogs.map((dog) => (
+                      <>
+                        <span key={`sep-${dog.id}`} className="text-2xl font-bold text-[#0F2240]/30">+</span>
+                        <div key={dog.id} className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg bg-[#EDE3D6] flex items-center justify-center shrink-0">
+                          {dog.avatar ? (
+                            <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
+                          ) : (
+                            <span className="text-3xl">🐾</span>
+                          )}
+                        </div>
+                      </>
+                    ))}
                   </div>
 
                   <div>
                     <h1 className="text-2xl font-bold text-[#0F2240]">
-                      {humanProfile?.display_name ?? 'You'} &amp; {form.name} are on Dogish
+                      {(() => {
+                        const owner = humanProfile?.display_name ?? 'You'
+                        if (allDogs.length === 0) return `${owner} & ${form.name} are on Dogish`
+                        if (allDogs.length === 1) return `${owner} & ${allDogs[0].name} are on Dogish`
+                        const dogNames = allDogs.map((d) => d.name)
+                        const last = dogNames.pop()
+                        return `${owner}, ${dogNames.join(', ')} & ${last} are on Dogish`
+                      })()}
                     </h1>
                     <p className="text-muted-foreground mt-1 text-sm max-w-xs mx-auto">
                       Time to share some posts, find your kit, and discover the best spots in your city.
@@ -689,6 +694,34 @@ export default function NewDogPage() {
                     >
                       View your profile
                     </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep(0)
+                        setCreatedDogId(null)
+                        setHumanProfile(null)
+                        setAllDogs([])
+                        setError(null)
+                        setForm({
+                          name: '',
+                          avatar: null,
+                          avatarPreview: null,
+                          breeds: [],
+                          mixDescription: '',
+                          birthday: '',
+                          size: '',
+                          sex: 'unknown',
+                          bio: '',
+                          personalityTags: [],
+                          allergies: [],
+                          allergyInput: '',
+                          isPrivate: false,
+                        })
+                      }}
+                      className="text-sm text-[#0F2240]/40 hover:text-[#0F2240] transition-colors underline-offset-2 hover:underline"
+                    >
+                      Add another dog
+                    </button>
                   </div>
                 </div>
               )}

@@ -207,6 +207,7 @@ export default function ProfileSetupPage() {
               placeholder="City, State"
               className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] text-[#0F2240]"
             />
+            <p className="text-xs text-[#0F2240]/40">Helps us connect you with local dog owners, parks, and places.</p>
           </div>
 
           {error && (
