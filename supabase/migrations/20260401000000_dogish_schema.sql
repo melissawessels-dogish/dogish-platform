@@ -47,13 +47,15 @@ create table dog_breeds (
 create table kit (
   id         uuid primary key default uuid_generate_v4(),
   owner_id   uuid not null references auth.users (id) on delete cascade,
-  dog_id     uuid references dog (id) on delete set null,
+  dog_id     uuid references dog (id) on delete cascade,
   name       text not null,
+  category   text,
   is_public  boolean not null default true,
   created_at timestamptz not null default now()
 );
 
 create index kit_owner on kit (owner_id);
+create index kit_dog on kit (dog_id);
 
 -- kit_items  (formerly: pack_items)
 create table kit_items (

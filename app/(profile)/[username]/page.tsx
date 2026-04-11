@@ -75,6 +75,15 @@ export default async function ProfilePage({
 
   const dogList: Dog[] = (dogs ?? []) as Dog[]
 
+  const { data: kits } = await admin
+    .from('kit')
+    .select('id, name')
+    .eq('owner_id', h.id)
+    .is('dog_id', null)
+    .order('created_at', { ascending: true })
+
+  const kitList = kits ?? []
+
   return (
     <div className="min-h-svh bg-white">
       <div className="max-w-[640px] mx-auto">
@@ -156,7 +165,7 @@ export default async function ProfilePage({
                 return (
                   <Link
                     key={dog.id}
-                    href={`/dogs/${dog.id}`}
+                    href={`/${username}/${dog.name.toLowerCase()}`}
                     className="flex-none flex flex-col items-center gap-2 group"
                   >
                     <div className="w-20 h-20 rounded-full overflow-hidden bg-[#F7F3EE] border-2 border-[#EDE3D6] group-hover:border-[#0F2240] transition-colors">
@@ -194,18 +203,40 @@ export default async function ProfilePage({
         {/* Kits section */}
         <div className="px-4 py-5">
           <h2 className="text-base font-bold text-[#0F2240] mb-4">Kits</h2>
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: '#EDE3D6' }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="1.5" opacity="0.5">
-                <rect x="2" y="7" width="20" height="14" rx="2" />
-                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-              </svg>
+          {kitList.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {kitList.map((kit) => (
+                <div
+                  key={kit.id}
+                  className="px-4 py-3 rounded-xl border border-[#0F2240]/10 bg-[#F7F3EE]"
+                >
+                  <p className="text-sm font-semibold text-[#0F2240]">{kit.name}</p>
+                </div>
+              ))}
             </div>
-            <p className="text-sm text-[#0F2240]/50">No kits yet.</p>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: '#EDE3D6' }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="1.5" opacity="0.5">
+                  <rect x="2" y="7" width="20" height="14" rx="2" />
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                </svg>
+              </div>
+              <p className="text-sm text-[#0F2240]/50">No kits yet.</p>
+              {isOwnProfile && (
+                <Link
+                  href="/kits/new"
+                  className="text-sm font-medium px-4 py-1.5 rounded-full text-white"
+                  style={{ backgroundColor: '#0F2240' }}
+                >
+                  Create a kit
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
       </div>

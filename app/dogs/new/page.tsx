@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -296,7 +296,7 @@ export default function NewDogPage() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [createdDogId, setCreatedDogId] = useState<string | null>(null)
-  const [humanProfile, setHumanProfile] = useState<{ display_name: string | null; avatar: string | null } | null>(null)
+  const [humanProfile, setHumanProfile] = useState<{ display_name: string | null; avatar: string | null; username: string | null } | null>(null)
   const [allDogs, setAllDogs] = useState<{ id: string; name: string; avatar: string | null }[]>([])
 
   const [form, setForm] = useState<FormData>({
@@ -417,7 +417,7 @@ export default function NewDogPage() {
 
       const { data: human } = await supabase
         .from('human')
-        .select('display_name, avatar')
+        .select('display_name, avatar, username')
         .eq('id', user.id)
         .single()
       setHumanProfile(human)
@@ -650,16 +650,16 @@ export default function NewDogPage() {
                       )}
                     </div>
                     {allDogs.map((dog) => (
-                      <>
-                        <span key={`sep-${dog.id}`} className="text-2xl font-bold text-[#0F2240]/30">+</span>
-                        <div key={dog.id} className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg bg-[#EDE3D6] flex items-center justify-center shrink-0">
+                      <React.Fragment key={dog.id}>
+                        <span className="text-2xl font-bold text-[#0F2240]/30">+</span>
+                        <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg bg-[#EDE3D6] flex items-center justify-center shrink-0">
                           {dog.avatar ? (
                             <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
                           ) : (
                             <span className="text-3xl">🐾</span>
                           )}
                         </div>
-                      </>
+                      </React.Fragment>
                     ))}
                   </div>
 
@@ -689,7 +689,7 @@ export default function NewDogPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => router.push('/profile')}
+                      onClick={() => humanProfile?.username ? router.push(`/${humanProfile.username}/${form.name.toLowerCase()}`) : router.push('/')}
                       className="border-[#0F2240]/20 text-[#0F2240] hover:bg-[#EDE3D6] h-10 text-sm w-full"
                     >
                       View your profile
