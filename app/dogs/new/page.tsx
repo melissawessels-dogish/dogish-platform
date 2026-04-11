@@ -35,10 +35,11 @@ interface FormData {
 }
 
 const PERSONALITY_TAGS = [
-  'cuddler', 'ball-obsessed', 'water-dog', 'couch-potato', 'adventurer',
-  'social-butterfly', 'shy', 'foodie', 'zoomies', 'velcro-dog',
-  'independent', 'playful', 'calm', 'protector', 'curious',
-  'good-with-kids', 'good-with-dogs', 'good-with-cats', 'senior', 'puppy-energy',
+  'cuddler', 'friendly', 'playful', 'adventurer', 'zoomies',
+  'ball-obsessed', 'water-dog', 'foodie', 'social-butterfly', 'velcro-dog',
+  'curious', 'calm', 'protector', 'independent', 'couch-potato',
+  'moody', 'anxious', 'fierce', 'stubborn', 'vocal',
+  'dramatic', 'selective', 'suspicious', 'sensitive', 'mischievous', 'extra',
 ]
 
 const COMMON_ALLERGIES = [

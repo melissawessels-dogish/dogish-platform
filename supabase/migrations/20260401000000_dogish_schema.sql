@@ -122,3 +122,25 @@ create policy "kit_items: write own kit"
   on kit_items for all using (
     exists (select 1 from kit where kit.id = kit_items.kit_id and kit.owner_id = auth.uid())
   );
+
+-- report
+create table report (
+  id          uuid primary key default uuid_generate_v4(),
+  reporter_id uuid not null references public.human (id) on delete cascade,
+  post_id     uuid references post (id) on delete cascade,
+  reason      text not null,
+  details     text,
+  status      text not null default 'pending',
+  created_at  timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by uuid references public.human (id) on delete set null
+);
+
+create index report_post   on report (post_id);
+create index report_status on report (status);
+
+alter table report enable row level security;
+
+create policy "report: insert own"
+  on report for insert
+  with check (reporter_id = (select id from public.human where id = auth.uid()));

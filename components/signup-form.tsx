@@ -65,7 +65,7 @@ export function SignupForm() {
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Create your account</h1>
                 <p className="text-balance text-muted-foreground">
-                  Join the social network for dogs.
+                  The social network for dog lovers.
                 </p>
               </div>
               {state?.error && (
@@ -96,6 +96,13 @@ export function SignupForm() {
                 >
                   {pending ? 'Creating account…' : 'Create account'}
                 </Button>
+                <p className="text-xs text-center text-muted-foreground mt-1">
+                  By creating an account you agree to our{' '}
+                  <a href="/about/community-guidelines" className="underline underline-offset-2 hover:text-foreground transition-colors">
+                    Community Guidelines
+                  </a>
+                  .
+                </p>
               </Field>
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-white">
                 Or continue with
