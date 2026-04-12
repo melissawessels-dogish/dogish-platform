@@ -144,13 +144,13 @@ export default function PostCard({ post, isLiked: initialIsLiked, currentUserId 
             stroke={isLiked ? '#e11d48' : '#0F2240'}
           />
         </button>
-        <a
+        <Link
           href={`/posts/${post.id}#comments`}
           aria-label="Comments"
           className="flex items-center justify-center p-1 -m-1 text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
         >
           <MessageCircle size={24} strokeWidth={1.8} />
-        </a>
+        </Link>
       </div>
 
       {/* Below image */}
@@ -199,12 +199,12 @@ export default function PostCard({ post, isLiked: initialIsLiked, currentUserId 
         )}
 
         {/* Comment count */}
-        <a
+        <Link
           href={`/posts/${post.id}#comments`}
-          className="text-[12px] text-[#0F2240]/45 hover:text-[#0F2240]/70 transition-colors"
+          className="text-[12px] text-[#0F2240]/45 hover:text-[#0F2240]/70 underline underline-offset-2 transition-colors"
         >
           View all {post.comment_count ?? 0} comments
-        </a>
+        </Link>
       </div>
     </article>
   )
