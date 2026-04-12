@@ -16,7 +16,7 @@ export default async function RootPage() {
     .maybeSingle()
 
   if (human?.username) {
-    redirect(`/${human.username}`)
+    redirect('/home')
   }
 
   redirect('/onboarding/profile')
