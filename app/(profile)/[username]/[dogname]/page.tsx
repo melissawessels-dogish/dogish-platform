@@ -41,6 +41,7 @@ export default async function DogProfilePage({
   params: Promise<{ username: string; dogname: string }>
 }) {
   const { username, dogname } = await params
+
   const admin = createAdminClient()
   const supabase = await createClient()
 

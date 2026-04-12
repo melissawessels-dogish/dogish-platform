@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import BottomNav from '@/components/BottomNav'
 import PostCard, { type PostCardPost } from '@/components/PostCard'
+import SignOutButton from '@/components/SignOutButton'
 
 export default async function FeedPage() {
   const supabase = await createClient()
@@ -112,9 +113,13 @@ export default async function FeedPage() {
       <div className="max-w-[380px] mx-auto">
 
         {/* Wordmark */}
-        <div className="flex justify-center pt-4 pb-2 px-3 border-b border-[#F0F0F0]">
+        <div className="flex items-center justify-between pt-4 pb-2 px-3 border-b border-[#F0F0F0]">
+          <div className="w-16" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/dogish-wordmark.svg" alt="Dogish" style={{ height: 26 }} />
+          <div className="w-16 flex justify-end">
+            <SignOutButton />
+          </div>
         </div>
 
         {posts.length === 0 ? (

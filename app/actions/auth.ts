@@ -28,7 +28,7 @@ export async function signIn(prevState: AuthState, formData: FormData): Promise<
     return { error: error.message }
   }
 
-  redirect('/')
+  redirect('/home')
 }
 
 export async function signUp(prevState: AuthState, formData: FormData): Promise<AuthState> {

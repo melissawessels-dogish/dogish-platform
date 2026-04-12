@@ -43,7 +43,18 @@ export default async function ProfilePage({
   const h = human as Human
 
   const { data: { user } } = await supabase.auth.getUser()
-  const isOwnProfile = user?.id === h.id
+
+  // Look up the session user's own username to determine ownership
+  let myUsername: string | null = null
+  if (user) {
+    const { data: me } = await admin
+      .from('human')
+      .select('username')
+      .eq('id', user.id)
+      .maybeSingle()
+    myUsername = me?.username ?? null
+  }
+  const isOwnProfile = !!myUsername && myUsername.toLowerCase() === username.toLowerCase()
 
   // Check if current user is following this human
   let isFollowing = false
@@ -150,7 +161,7 @@ export default async function ProfilePage({
             <div className="shrink-0 mt-1">
               {isOwnProfile ? (
                 <Link
-                  href="/onboarding/profile"
+                  href="/settings/profile"
                   className="text-[13px] font-medium px-4 py-1.5 rounded-full border border-[#0F2240]/25 text-[#0F2240] hover:bg-[#F7F3EE] transition-colors whitespace-nowrap"
                 >
                   Edit profile
