@@ -485,6 +485,16 @@ export default function ProfileSetupPage() {
             {submitting ? 'Setting up…' : 'Continue'}
           </button>
 
+          <p className="text-center text-[11px] text-[#0F2240]/40 leading-relaxed mt-3">
+            By continuing you agree to our{' '}
+            <a href="/about/terms" className="underline underline-offset-2 hover:text-[#0F2240]/70 transition-colors">Terms of Service</a>
+            {', '}
+            <a href="/about/privacy" className="underline underline-offset-2 hover:text-[#0F2240]/70 transition-colors">Privacy Policy</a>
+            {', and '}
+            <a href="/about/community-guidelines" className="underline underline-offset-2 hover:text-[#0F2240]/70 transition-colors">Community Guidelines</a>
+            {'.'}
+          </p>
+
         </form>
       </div>
     </div>

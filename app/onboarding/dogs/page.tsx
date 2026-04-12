@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -335,7 +336,7 @@ export default function OnboardingDogsPage() {
         .map((d) => ({ id: d.id, name: d.name, avatar: d.avatar }))
 
       if (pending.length === 0) {
-        router.replace('/onboarding/guidelines')
+        router.replace('/home')
         return
       }
 
@@ -452,7 +453,7 @@ export default function OnboardingDogsPage() {
         return
       }
 
-      router.push('/onboarding/guidelines')
+      router.push('/home')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSubmitting(false)
@@ -485,6 +486,19 @@ export default function OnboardingDogsPage() {
               Setting up <span className="font-semibold text-[#0F2240]">{pendingDogs[0].name}</span>
               {' · '}Next: <span className="font-semibold text-[#0F2240]">{pendingDogs[1].name}</span>
             </div>
+          )}
+
+          {/* Back to profile — step 0 only */}
+          {step === 0 && (
+            <Link
+              href="/onboarding/profile"
+              className="inline-flex items-center gap-1.5 text-[13px] text-[#0F2240]/50 hover:text-[#0F2240] transition-colors mb-4"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
+              Back
+            </Link>
           )}
 
           {/* Step header */}
