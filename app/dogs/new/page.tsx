@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -300,6 +300,11 @@ export default function NewDogPage() {
   const [humanProfile, setHumanProfile] = useState<{ display_name: string | null; avatar: string | null; username: string | null } | null>(null)
   const [allDogs, setAllDogs] = useState<{ id: string; name: string; avatar: string | null }[]>([])
 
+  // Dogs created during onboarding that still need breed/details filled in
+  const [pendingDogs, setPendingDogs] = useState<{ id: string; name: string; avatar: string | null }[]>([])
+  // ID of the dog we're currently editing (null = creating a brand new dog)
+  const [existingDogId, setExistingDogId] = useState<string | null>(null)
+
   const [form, setForm] = useState<FormData>({
     name: '',
     avatar: null,
@@ -315,6 +320,37 @@ export default function NewDogPage() {
     allergyInput: '',
     isPrivate: false,
   })
+
+  // On mount: find dogs created during onboarding that have no breed set yet
+  useEffect(() => {
+    async function loadPendingDogs() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: dogs } = await supabase
+        .from('dog')
+        .select('id, name, avatar, dog_breeds(breed_id)')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: true })
+
+      if (!dogs) return
+
+      const pending = (dogs as unknown as { id: string; name: string; avatar: string | null; dog_breeds: { breed_id: string }[] }[])
+        .filter((d) => d.dog_breeds.length === 0)
+        .map((d) => ({ id: d.id, name: d.name, avatar: d.avatar }))
+
+      if (pending.length > 0) {
+        setPendingDogs(pending)
+        setExistingDogId(pending[0].id)
+        setForm((prev) => ({
+          ...prev,
+          name: pending[0].name,
+          avatarPreview: pending[0].avatar,
+        }))
+      }
+    }
+    loadPendingDogs()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (patch: Partial<FormData>) =>
     setForm((prev) => ({ ...prev, ...patch }))
@@ -373,7 +409,8 @@ export default function NewDogPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      let avatarUrl: string | null = null
+      // Upload new avatar file if selected; otherwise keep existing URL
+      let avatarUrl: string | null = form.avatarPreview
       if (form.avatar) {
         const ext = form.avatar.name.split('.').pop()
         const path = `${user.id}/${Date.now()}.${ext}`
@@ -385,30 +422,44 @@ export default function NewDogPage() {
         avatarUrl = urlData.publicUrl
       }
 
-      const { data: dog, error: dogError } = await supabase
-        .from('dog')
-        .insert({
-          owner_id: user.id,
-          name: form.name.trim(),
-          avatar: avatarUrl,
-          birthday: form.birthday || null,
-          size: form.size || null,
-          sex: form.sex,
-          bio: form.bio.trim() || null,
-          allergies: form.allergies.length > 0 ? form.allergies : null,
-          personality_tags: form.personalityTags.length > 0 ? form.personalityTags : null,
-          mix_description: form.mixDescription.trim() || null,
-          is_private: form.isPrivate,
-        })
-        .select('id')
-        .single()
+      const dogFields = {
+        name: form.name.trim(),
+        avatar: avatarUrl,
+        birthday: form.birthday || null,
+        size: form.size || null,
+        sex: form.sex,
+        bio: form.bio.trim() || null,
+        allergies: form.allergies.length > 0 ? form.allergies : null,
+        personality_tags: form.personalityTags.length > 0 ? form.personalityTags : null,
+        mix_description: form.mixDescription.trim() || null,
+        is_private: form.isPrivate,
+      }
 
-      if (dogError) throw dogError
+      let savedDogId: string
+
+      if (existingDogId) {
+        // Update the onboarding-created dog
+        const { error: dogError } = await supabase
+          .from('dog')
+          .update(dogFields)
+          .eq('id', existingDogId)
+        if (dogError) throw dogError
+        savedDogId = existingDogId
+      } else {
+        // Insert a brand new dog
+        const { data: dog, error: dogError } = await supabase
+          .from('dog')
+          .insert({ owner_id: user.id, ...dogFields })
+          .select('id')
+          .single()
+        if (dogError) throw dogError
+        savedDogId = dog.id
+      }
 
       if (form.breeds.length > 0) {
         const { error: breedError } = await supabase.from('dog_breeds').insert(
           form.breeds.map((b, i) => ({
-            dog_id: dog.id,
+            dog_id: savedDogId,
             breed_id: b.id,
             is_primary: i === 0,
           }))
@@ -416,6 +467,33 @@ export default function NewDogPage() {
         if (breedError) throw breedError
       }
 
+      // Check if there are more pending onboarding dogs to complete
+      const remainingPending = pendingDogs.slice(1)
+      if (remainingPending.length > 0) {
+        // Advance to the next pending dog
+        setPendingDogs(remainingPending)
+        setExistingDogId(remainingPending[0].id)
+        setStep(0)
+        setForm({
+          name: remainingPending[0].name,
+          avatar: null,
+          avatarPreview: remainingPending[0].avatar,
+          breeds: [],
+          mixDescription: '',
+          birthday: '',
+          size: '',
+          sex: 'unknown',
+          bio: '',
+          personalityTags: [],
+          allergies: [],
+          allergyInput: '',
+          isPrivate: false,
+        })
+        setSubmitting(false)
+        return
+      }
+
+      // All done — show success screen
       const { data: human } = await supabase
         .from('human')
         .select('display_name, avatar, username')
@@ -430,7 +508,7 @@ export default function NewDogPage() {
         .order('created_at', { ascending: true })
       setAllDogs(dogs ?? [])
 
-      setCreatedDogId(dog.id)
+      setCreatedDogId(savedDogId)
       setStep(TOTAL_STEPS - 1)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -449,6 +527,14 @@ export default function NewDogPage() {
           style={{ height: 40, display: 'block', margin: '0 auto 32px' }}
         />
         <div className="flex flex-col">
+
+              {/* Pending-dog progress banner */}
+              {pendingDogs.length > 1 && step < TOTAL_STEPS - 1 && (
+                <div className="mb-4 px-3 py-2 rounded-lg bg-[#F7F3EE] text-[13px] text-[#0F2240]/70">
+                  Setting up <span className="font-semibold text-[#0F2240]">{pendingDogs[0].name}</span>
+                  {' · '}Next: <span className="font-semibold text-[#0F2240]">{pendingDogs[1].name}</span>
+                </div>
+              )}
 
               {/* Step header */}
               {step < TOTAL_STEPS - 1 && (

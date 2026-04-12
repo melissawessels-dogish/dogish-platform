@@ -43,13 +43,13 @@ export default function CommunityGuidelinesPage() {
           </p>
         </div>
 
-        {/* Back to home */}
+        {/* Back */}
         <div className="text-center">
           <Link
-            href="/"
+            href="/onboarding/guidelines"
             className="text-sm text-[#0F2240]/40 hover:text-[#0F2240] underline-offset-2 hover:underline transition-colors"
           >
-            ← Back to home
+            ← Back to community guidelines
           </Link>
         </div>
 
