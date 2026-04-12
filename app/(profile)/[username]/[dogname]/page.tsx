@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import FollowButton from '@/components/FollowButton'
 
 type DogPage = {
   id: string
@@ -16,6 +17,7 @@ type DogPage = {
   allergies: string[] | null
   is_private: boolean
   owner_id: string
+  follower_count: number | null
   dog_breeds: {
     is_primary: boolean
     breed: { name: string } | null
@@ -68,6 +70,7 @@ export default async function DogProfilePage({
       allergies,
       is_private,
       owner_id,
+      follower_count,
       dog_breeds(
         is_primary,
         breed:breed(name)
@@ -86,6 +89,18 @@ export default async function DogProfilePage({
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnDog = user?.id === d.owner_id
 
+  // Check if current user is following this dog
+  let isFollowingDog = false
+  if (user && !isOwnDog) {
+    const { data: followRow } = await supabase
+      .from('follow')
+      .select('id')
+      .eq('follower_id', user.id)
+      .eq('target_dog_id', d.id)
+      .maybeSingle()
+    isFollowingDog = !!followRow
+  }
+
   const { data: kits } = await admin
     .from('kit')
     .select('id, name')
@@ -93,6 +108,16 @@ export default async function DogProfilePage({
     .order('created_at', { ascending: true })
 
   const kitList = kits ?? []
+
+  const { data: postDogs } = await admin
+    .from('post_dogs')
+    .select('post:post_id ( id, images, created_at )')
+    .eq('dog_id', d.id)
+    .order('created_at', { ascending: false, referencedTable: 'post' })
+
+  const dogPosts = (postDogs ?? [])
+    .map((r) => r.post as { id: string; images: string[] | null } | null)
+    .filter((p): p is { id: string; images: string[] | null } => p !== null)
 
   return (
     <div className="min-h-svh bg-white">
@@ -141,12 +166,13 @@ export default async function DogProfilePage({
                 Edit
               </Link>
             ) : (
-              <button
-                className="text-sm font-semibold px-5 py-1.5 rounded-full text-white transition-colors"
-                style={{ backgroundColor: '#0F2240' }}
-              >
-                Follow
-              </button>
+              <FollowButton
+                targetType="dog"
+                targetId={d.id}
+                targetUsername={username}
+                isFollowing={isFollowingDog}
+                followerCount={d.follower_count ?? 0}
+              />
             )}
           </div>
 
@@ -210,20 +236,31 @@ export default async function DogProfilePage({
         <div className="border-t border-[#0F2240]/8" />
 
         {/* Posts section */}
-        <div className="px-4 py-5">
-          <h2 className="text-base font-bold text-[#0F2240] mb-4">Posts</h2>
-          <div className="flex flex-col items-center gap-2 py-8 text-center">
-            <div
-              className="w-12 h-12 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: '#EDE3D6' }}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="1.5" opacity="0.5">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <path d="M3 9h18M9 21V9" />
-              </svg>
+        <div className="py-5">
+          <h2 className="text-base font-bold text-[#0F2240] px-4 mb-3">Posts</h2>
+          {dogPosts.length > 0 ? (
+            <div className="grid grid-cols-3 gap-px">
+              {dogPosts.map((post) => {
+                const img = post.images?.[0]
+                return (
+                  <Link key={post.id} href={`/posts/${post.id}`} className="group block">
+                    <div className="relative w-full aspect-[4/5] overflow-hidden bg-[#F7F3EE]">
+                      {img && (
+                        <Image
+                          src={img}
+                          alt=""
+                          fill
+                          className="object-cover group-hover:opacity-90 transition-opacity"
+                        />
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
-            <p className="text-sm text-[#0F2240]/50">No posts yet.</p>
-          </div>
+          ) : (
+            <p className="text-center text-sm text-[#0F2240]/40 py-8">No posts yet.</p>
+          )}
         </div>
 
         <div className="border-t border-[#0F2240]/8" />

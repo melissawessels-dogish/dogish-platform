@@ -3,17 +3,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-
-type DogBreed = {
-  is_primary: boolean
-  breed: { name: string } | null
-}
+import FollowButton from '@/components/FollowButton'
 
 type Dog = {
   id: string
   name: string
   avatar: string | null
-  dog_breeds: DogBreed[]
 }
 
 type Human = {
@@ -23,13 +18,7 @@ type Human = {
   avatar: string | null
   bio: string | null
   location: string | null
-}
-
-function getPrimaryBreed(dog: Dog): string | null {
-  const primary = dog.dog_breeds.find((b) => b.is_primary)
-  if (primary?.breed) return primary.breed.name
-  const first = dog.dog_breeds[0]
-  return first?.breed?.name ?? null
+  follower_count: number | null
 }
 
 export default async function ProfilePage({
@@ -41,18 +30,14 @@ export default async function ProfilePage({
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  const { data: human, error: humanError } = await admin
+  const { data: human } = await admin
     .from('human')
-    .select('id, display_name, username, avatar, bio, location')
+    .select('id, display_name, username, avatar, bio, location, follower_count')
     .eq('username', username)
     .maybeSingle()
 
   if (!human) {
-    return (
-      <pre style={{ padding: 24, fontFamily: 'monospace', fontSize: 13, whiteSpace: 'pre-wrap' }}>
-        {JSON.stringify({ username, human, error: humanError }, null, 2)}
-      </pre>
-    )
+    notFound()
   }
 
   const h = human as Human
@@ -60,133 +45,176 @@ export default async function ProfilePage({
   const { data: { user } } = await supabase.auth.getUser()
   const isOwnProfile = user?.id === h.id
 
+  // Check if current user is following this human
+  let isFollowing = false
+  if (user && !isOwnProfile) {
+    const { data: followRow } = await supabase
+      .from('follow')
+      .select('id')
+      .eq('follower_id', user.id)
+      .eq('target_human_id', h.id)
+      .maybeSingle()
+    isFollowing = !!followRow
+  }
+
   const { data: dogs } = await admin
     .from('dog')
-    .select(`
-      id,
-      name,
-      avatar,
-      dog_breeds(
-        is_primary,
-        breed:breed(name)
-      )
-    `)
+    .select('id, name, avatar')
     .eq('owner_id', h.id)
 
   const dogList: Dog[] = (dogs ?? []) as Dog[]
 
-  const { data: kits } = await admin
-    .from('kit')
-    .select('id, name')
-    .eq('owner_id', h.id)
-    .is('dog_id', null)
-    .order('created_at', { ascending: true })
+  const { data: posts } = await admin
+    .from('post')
+    .select('id, images')
+    .eq('author_id', h.id)
+    .eq('is_private', false)
+    .order('created_at', { ascending: false })
 
-  const kitList = kits ?? []
+  const postList = (posts ?? []) as { id: string; images: string[] | null }[]
+
+  const followerCount = h.follower_count ?? 0
 
   return (
     <div className="min-h-svh bg-white">
       <div className="max-w-[640px] mx-auto">
 
-        {/* Cover photo */}
-        <div
-          className="relative w-full"
-          style={{ height: 180, backgroundColor: '#EDE3D6' }}
-        >
+        {/* Cover strip */}
+        <div className="w-full" style={{ height: 160, backgroundColor: '#EDE3D6' }} />
+
+        {/* Avatar row — -mt-10 pulls row up by 40px (half of 80px avatar height) */}
+        <div className="px-4 -mt-10">
+          <div className="flex items-start gap-2">
+
+            {/* Human avatar (not a link) */}
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <div
+                className="relative w-20 h-20 rounded-full border-[3px] border-white overflow-hidden bg-[#EDE3D6]"
+                style={{ boxShadow: '0 1px 6px rgba(15,34,64,0.12)' }}
+              >
+                {h.avatar ? (
+                  <Image src={h.avatar} alt={h.display_name ?? 'Profile'} fill className="object-cover" />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-2xl font-bold text-[#0F2240]/40">
+                    {(h.display_name ?? h.username ?? '?')[0].toUpperCase()}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Dog avatars */}
+            {dogList.map((dog) => (
+              <Link
+                key={dog.id}
+                href={`/${username}/${dog.name.toLowerCase()}`}
+                className="flex flex-col items-center gap-1 shrink-0 group"
+              >
+                <div
+                  className="relative w-20 h-20 rounded-full border-[3px] border-white overflow-hidden bg-[#EDE3D6] cursor-pointer ring-offset-0 group-hover:ring-2 group-hover:ring-[#0F2240] transition-all"
+                  style={{ boxShadow: '0 1px 6px rgba(15,34,64,0.12)' }}
+                >
+                  {dog.avatar ? (
+                    <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-2xl font-bold text-[#0F2240]/40">
+                      {dog.name[0].toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <span className="text-[12px] font-medium text-[#0F2240] leading-tight text-center max-w-[80px] truncate underline underline-offset-2">
+                  {dog.name}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Avatar + action row */}
-        <div className="relative px-4">
-          {/* Avatar */}
-          <div
-            className="absolute -top-12 left-4 w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-[#F7F3EE]"
-            style={{ boxShadow: '0 2px 8px rgba(15,34,64,0.12)' }}
-          >
-            {h.avatar ? (
-              <Image src={h.avatar} alt={h.display_name ?? 'Profile'} fill className="object-cover" />
-            ) : (
-              <div className="flex items-center justify-center h-full text-3xl font-bold text-[#0F2240]/30">
-                {(h.display_name ?? '?')[0].toUpperCase()}
-              </div>
-            )}
+        {/* Profile info */}
+        <div className="px-4 mt-6 pb-4">
+
+          {/* Display name + action button */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {h.display_name && (
+                <h1 className="text-[20px] font-bold text-[#0F2240] leading-tight truncate">
+                  {h.display_name}
+                </h1>
+              )}
+              {h.username && (
+                <p className="text-[14px] text-[#0F2240]/50 mt-0.5">@{h.username}</p>
+              )}
+            </div>
+            <div className="shrink-0 mt-1">
+              {isOwnProfile ? (
+                <Link
+                  href="/onboarding/profile"
+                  className="text-[13px] font-medium px-4 py-1.5 rounded-full border border-[#0F2240]/25 text-[#0F2240] hover:bg-[#F7F3EE] transition-colors whitespace-nowrap"
+                >
+                  Edit profile
+                </Link>
+              ) : (
+                <FollowButton
+                  targetType="human"
+                  targetId={h.id}
+                  targetUsername={h.username}
+                  isFollowing={isFollowing}
+                  followerCount={followerCount}
+                />
+              )}
+            </div>
           </div>
 
-          {/* Action button */}
-          <div className="flex justify-end pt-3">
-            {isOwnProfile ? (
-              <Link
-                href="/onboarding/profile"
-                className="text-sm font-medium px-4 py-1.5 rounded-full border border-[#0F2240]/20 text-[#0F2240] hover:bg-[#F7F3EE] transition-colors"
-              >
-                Edit profile
-              </Link>
-            ) : (
-              <button
-                className="text-sm font-semibold px-5 py-1.5 rounded-full text-white transition-colors"
-                style={{ backgroundColor: '#0F2240' }}
-              >
-                Follow
-              </button>
-            )}
-          </div>
+          {/* Location */}
+          {h.location && (
+            <div className="flex items-center gap-1.5 mt-2 text-[13px] text-[#0F2240]/55">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0">
+                <path d="M20 10c0 6-8 13-8 13s-8-7-8-13a8 8 0 0 1 16 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              {h.location}
+            </div>
+          )}
 
-          {/* Identity */}
-          <div className="mt-3 pb-4">
-            {h.display_name && (
-              <h1 className="text-xl font-bold text-[#0F2240] leading-tight">{h.display_name}</h1>
-            )}
-            {h.username && (
-              <p className="text-sm text-[#0F2240]/50 mt-0.5">@{h.username}</p>
-            )}
-            {h.location && (
-              <div className="flex items-center gap-1.5 mt-2 text-sm text-[#0F2240]/60">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 10c0 6-8 13-8 13s-8-7-8-13a8 8 0 0 1 16 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                {h.location}
-              </div>
-            )}
-            {h.bio && (
-              <p className="mt-3 text-sm text-[#0F2240]/80 leading-relaxed">{h.bio}</p>
-            )}
+          {/* Bio */}
+          {h.bio && (
+            <p className="mt-2 text-[14px] text-[#0F2240]/80 leading-relaxed">{h.bio}</p>
+          )}
+
+          {/* Stats */}
+          <div className="flex items-center gap-1.5 mt-2 text-[13px] text-[#0F2240]/50">
+            <span>
+              <span className="font-semibold text-[#0F2240]">{postList.length}</span> Posts
+            </span>
+            <span className="select-none">·</span>
+            <span>
+              <span className="font-semibold text-[#0F2240]">{followerCount}</span> Followers
+            </span>
+            <span className="select-none">·</span>
+            <span>
+              <span className="font-semibold text-[#0F2240]">0</span> Following
+            </span>
           </div>
         </div>
 
         <div className="border-t border-[#0F2240]/8" />
 
-        {/* Dogs section */}
-        <div className="px-4 py-5">
-          <h2 className="text-base font-bold text-[#0F2240] mb-4">Dogs</h2>
-          {dogList.length > 0 ? (
-            <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
-              {dogList.map((dog) => {
-                const breed = getPrimaryBreed(dog)
+        {/* Posts grid */}
+        <div className="mt-6 px-4 pb-24">
+          <h2 className="text-[15px] font-semibold text-[#0F2240] mb-3">Posts</h2>
+          {postList.length > 0 ? (
+            <div className="grid grid-cols-3 gap-px">
+              {postList.map((post) => {
+                const img = post.images?.[0]
                 return (
-                  <Link
-                    key={dog.id}
-                    href={`/${username}/${dog.name.toLowerCase()}`}
-                    className="flex-none flex flex-col items-center gap-2 group"
-                  >
-                    <div className="w-20 h-20 rounded-full overflow-hidden bg-[#F7F3EE] border-2 border-[#EDE3D6] group-hover:border-[#0F2240] transition-colors">
-                      {dog.avatar ? (
+                  <Link key={post.id} href={`/posts/${post.id}`} className="group block">
+                    <div className="relative w-full aspect-[4/5] overflow-hidden bg-[#F7F3EE]">
+                      {img && (
                         <Image
-                          src={dog.avatar}
-                          alt={dog.name}
-                          width={80}
-                          height={80}
-                          className="object-cover w-full h-full"
+                          src={img}
+                          alt=""
+                          fill
+                          className="object-cover group-hover:opacity-90 transition-opacity"
                         />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-2xl font-bold text-[#0F2240]/20">
-                          {dog.name[0].toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <p className="text-xs font-semibold text-[#0F2240] leading-tight">{dog.name}</p>
-                      {breed && (
-                        <p className="text-[10px] text-[#0F2240]/50 mt-0.5 max-w-[72px] truncate">{breed}</p>
                       )}
                     </div>
                   </Link>
@@ -194,52 +222,26 @@ export default async function ProfilePage({
               })}
             </div>
           ) : (
-            <p className="text-sm text-[#0F2240]/40">No dogs yet.</p>
-          )}
-        </div>
-
-        <div className="border-t border-[#0F2240]/8" />
-
-        {/* Kits section */}
-        <div className="px-4 py-5">
-          <h2 className="text-base font-bold text-[#0F2240] mb-4">Kits</h2>
-          {kitList.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {kitList.map((kit) => (
-                <div
-                  key={kit.id}
-                  className="px-4 py-3 rounded-xl border border-[#0F2240]/10 bg-[#F7F3EE]"
-                >
-                  <p className="text-sm font-semibold text-[#0F2240]">{kit.name}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-3 py-8 text-center">
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: '#EDE3D6' }}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="1.5" opacity="0.5">
-                  <rect x="2" y="7" width="20" height="14" rx="2" />
-                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-                </svg>
-              </div>
-              <p className="text-sm text-[#0F2240]/50">No kits yet.</p>
-              {isOwnProfile && (
-                <Link
-                  href="/kits/new"
-                  className="text-sm font-medium px-4 py-1.5 rounded-full text-white"
-                  style={{ backgroundColor: '#0F2240' }}
-                >
-                  Create a kit
-                </Link>
-              )}
-            </div>
+            <p className="text-center text-[14px] text-[#0F2240]/40 py-10">No posts yet.</p>
           )}
         </div>
 
       </div>
+
+      {/* Floating new post button — own profile only */}
+      {isOwnProfile && (
+        <Link
+          href="/posts/new"
+          className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
+          style={{ backgroundColor: '#0F2240' }}
+          aria-label="New post"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+        </Link>
+      )}
     </div>
   )
 }
