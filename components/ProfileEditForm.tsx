@@ -8,8 +8,15 @@ import { updateProfile } from '@/app/actions/profile'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import DogList from '@/components/DogList'
 
 const USERNAME_RE = /^[a-z0-9_]*$/
+
+type Dog = {
+  id: string
+  name: string
+  avatar: string | null
+}
 
 type Props = {
   userId: string
@@ -22,9 +29,10 @@ type Props = {
     avatar: string | null
     cover_photo: string | null
   }
+  dogs: Dog[]
 }
 
-export default function ProfileEditForm({ userId, initial }: Props) {
+export default function ProfileEditForm({ userId, initial, dogs }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -166,42 +174,50 @@ export default function ProfileEditForm({ userId, initial }: Props) {
         />
       </div>
 
-      {/* Avatar */}
-      <div className="flex flex-col items-center gap-2">
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={avatarUploading}
-          className="relative group w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-[#0F2240]/20 hover:border-[#0F2240]/50 transition-colors bg-[#F7F3EE] focus:outline-none focus:ring-2 focus:ring-[#0F2240] focus:ring-offset-2 disabled:opacity-60"
-        >
-          {avatar ? (
-            <>
-              <Image src={avatar} alt="Avatar" fill className="object-cover" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                <span className="text-white text-xs font-medium">Change</span>
+      {/* Identity row: human avatar + dog circles */}
+      <div className="flex flex-row gap-4 flex-wrap items-start">
+        {/* Human avatar */}
+        <div className="flex flex-col items-center gap-1.5" style={{ width: 96 }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={avatarUploading}
+            className="relative group w-24 h-24 rounded-full overflow-hidden border-2 border-dashed border-[#0F2240]/20 hover:border-[#0F2240]/50 transition-colors bg-[#F7F3EE] focus:outline-none focus:ring-2 focus:ring-[#0F2240] focus:ring-offset-2 disabled:opacity-60"
+          >
+            {avatar ? (
+              <>
+                <Image src={avatar} alt="Avatar" fill className="object-cover" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-xs font-medium">Change</span>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-1 text-[#0F2240]/40 group-hover:text-[#0F2240] transition-colors">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span className="text-[10px] font-medium uppercase tracking-wide">Photo</span>
               </div>
-            </>
+            )}
+          </button>
+          {avatarUploading ? (
+            <p className="text-[11px] text-[#0F2240]/50">Uploading…</p>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-1 text-[#0F2240]/40 group-hover:text-[#0F2240] transition-colors">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="17 8 12 3 7 8" />
-                <line x1="12" y1="3" x2="12" y2="15" />
-              </svg>
-              <span className="text-[10px] font-medium uppercase tracking-wide">Photo</span>
-            </div>
+            <span className="text-[13px] text-[#0F2240]/40 text-center leading-tight">You</span>
           )}
-        </button>
-        {avatarUploading && (
-          <p className="text-[12px] text-[#0F2240]/50">Uploading…</p>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleAvatarChange}
-        />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
+        </div>
+
+        {/* Dog circles */}
+        <DogList dogs={dogs} />
       </div>
 
       {/* Display name */}

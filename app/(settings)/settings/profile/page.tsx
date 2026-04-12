@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import ProfileEditForm from '@/components/ProfileEditForm'
-import DogList from '@/components/DogList'
 
 export default async function EditProfilePage() {
   const supabase = await createClient()
@@ -18,8 +17,6 @@ export default async function EditProfilePage() {
     .select('id, display_name, username, bio, location, avatar')
     .eq('id', user.id)
     .maybeSingle()
-
-  console.log('[settings/profile]', { userId: user.id, human: human?.username ?? null, humanError })
 
   if (!human) redirect('/login')
 
@@ -60,15 +57,8 @@ export default async function EditProfilePage() {
         </div>
 
         {/* Form */}
-        <div className="px-4 py-6 flex flex-col gap-8">
-          <ProfileEditForm userId={user.id} initial={initial} />
-
-          {/* Dogs */}
-          <div>
-            <div className="border-t border-[#0F2240]/8 mb-6" />
-            <h2 className="text-[15px] font-semibold text-[#0F2240] mb-4">Your dogs</h2>
-            <DogList dogs={(dogs ?? []) as { id: string; name: string; avatar: string | null }[]} />
-          </div>
+        <div className="px-4 py-6">
+          <ProfileEditForm userId={user.id} initial={initial} dogs={(dogs ?? []) as { id: string; name: string; avatar: string | null }[]} />
         </div>
 
       </div>
