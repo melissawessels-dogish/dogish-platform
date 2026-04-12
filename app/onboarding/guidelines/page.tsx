@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 const POINTS = [
   'Dogish is not a dog marketplace. No buying, selling, or facilitating the adoption of dogs. We fully support responsible rescue organizations, shelters, and breeders.',
@@ -16,6 +17,16 @@ export default function GuidelinesPage() {
   return (
     <div className="min-h-svh py-12 px-6 bg-white">
       <div className="w-full max-w-[480px] mx-auto flex flex-col">
+        <Link
+          href="/onboarding/dogs"
+          className="inline-flex items-center gap-1.5 text-[13px] text-[#0F2240]/50 hover:text-[#0F2240] transition-colors mb-6"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M19 12H5M12 5l-7 7 7 7" />
+          </svg>
+          Back
+        </Link>
+
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/dogish-brand.svg"
@@ -68,7 +79,7 @@ export default function GuidelinesPage() {
         <button
           type="button"
           disabled={!agreed}
-          onClick={() => router.push('/dogs/new')}
+          onClick={() => router.push('/home')}
           className="h-10 rounded-md text-sm font-medium text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
           style={{ backgroundColor: '#0F2240' }}
         >

@@ -219,7 +219,7 @@ export default function ProfileSetupPage() {
         if (dogError) throw dogError
       }
 
-      router.push('/onboarding/guidelines')
+      router.push('/onboarding/dogs')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSubmitting(false)
