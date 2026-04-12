@@ -79,11 +79,11 @@ export default async function ProfilePage({
     <div className="min-h-svh bg-white">
       <div className="max-w-[640px] mx-auto">
 
-        {/* Cover strip */}
-        <div className="w-full" style={{ height: 160, backgroundColor: '#EDE3D6' }} />
+        {/* Cover strip — pointer-events-none so it never intercepts clicks below */}
+        <div className="w-full pointer-events-none" style={{ height: 160, backgroundColor: '#EDE3D6' }} />
 
         {/* Avatar row — -mt-10 pulls row up by 40px (half of 80px avatar height) */}
-        <div className="px-4 -mt-10">
+        <div className="relative z-10 px-4 -mt-10">
           <div className="flex items-start gap-2">
 
             {/* Human avatar (not a link) */}
@@ -100,6 +100,9 @@ export default async function ProfilePage({
                   </div>
                 )}
               </div>
+              <span className="block text-[12px] font-medium text-[#0F2240] leading-tight text-center w-20 overflow-hidden text-ellipsis whitespace-nowrap mt-1">
+                {h.display_name ?? h.username ?? ''}
+              </span>
             </div>
 
             {/* Dog avatars */}
@@ -121,7 +124,7 @@ export default async function ProfilePage({
                     </div>
                   )}
                 </div>
-                <span className="text-[12px] font-medium text-[#0F2240] leading-tight text-center max-w-[80px] truncate underline underline-offset-2">
+                <span className="block text-[12px] font-medium text-[#0F2240] leading-tight text-center w-20 overflow-hidden text-ellipsis whitespace-nowrap underline underline-offset-2 mt-1">
                   {dog.name}
                 </span>
               </Link>
@@ -130,7 +133,7 @@ export default async function ProfilePage({
         </div>
 
         {/* Profile info */}
-        <div className="px-4 mt-6 pb-4">
+        <div className="relative z-10 px-4 mt-6 pb-4">
 
           {/* Display name + action button */}
           <div className="flex items-start justify-between gap-3">

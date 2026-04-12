@@ -22,6 +22,7 @@ export default function FollowButton({
   const [isPending, startTransition] = useTransition()
 
   const handleClick = () => {
+    console.log('follow clicked', { targetType, targetId, isFollowing })
     const prev = isFollowing
     setIsFollowing(!prev)
 
