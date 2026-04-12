@@ -36,14 +36,14 @@ interface FormData {
 
 const PERSONALITY_TAGS = [
   'cuddler', 'friendly', 'playful', 'adventurer', 'zoomies',
-  'ball-obsessed', 'water-dog', 'foodie', 'social-butterfly', 'velcro-dog',
+  'ball-obsessed', 'water-dog', 'foodie', 'social butterfly', 'velcro-dog',
   'curious', 'calm', 'protector', 'independent', 'couch-potato',
   'moody', 'anxious', 'fierce', 'stubborn', 'vocal',
   'dramatic', 'selective', 'suspicious', 'sensitive', 'mischievous', 'extra',
 ]
 
 const COMMON_ALLERGIES = [
-  'chicken', 'beef', 'wheat', 'corn', 'soy',
+  'None', 'chicken', 'beef', 'wheat', 'corn', 'soy',
   'dairy', 'eggs', 'fish', 'lamb', 'pork',
 ]
 
@@ -369,11 +369,18 @@ export default function NewDogPage() {
   }
 
   const toggleAllergy = (tag: string) => {
-    update({
-      allergies: form.allergies.includes(tag)
-        ? form.allergies.filter((t) => t !== tag)
-        : [...form.allergies, tag],
-    })
+    if (tag === 'None') {
+      // Selecting None clears everything else
+      update({ allergies: form.allergies.includes('None') ? [] : ['None'] })
+    } else {
+      // Selecting any real allergy removes None
+      const without = form.allergies.filter((t) => t !== 'None')
+      update({
+        allergies: without.includes(tag)
+          ? without.filter((t) => t !== tag)
+          : [...without, tag],
+      })
+    }
   }
 
   const addCustomAllergy = () => {

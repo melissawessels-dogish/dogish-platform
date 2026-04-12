@@ -108,9 +108,11 @@ export default function PostCard({ post, isLiked: initialIsLiked, currentUserId 
           </div>
         </Link>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-[#0F2240] leading-tight truncate">
-            {author.display_name ?? author.username}
-          </p>
+          <Link href={author.username ? `/${author.username}` : '/'} className="hover:underline underline-offset-2">
+            <p className="text-[13px] font-semibold text-[#0F2240] leading-tight truncate">
+              {author.display_name ?? author.username}
+            </p>
+          </Link>
           {author.username && (
             <p className="text-[11px] text-[#0F2240]/45 leading-tight">
               @{author.username} · {timeAgo(post.created_at)}
