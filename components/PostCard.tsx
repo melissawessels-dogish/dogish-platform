@@ -144,21 +144,24 @@ export default function PostCard({ post, isLiked: initialIsLiked, currentUserId 
             stroke={isLiked ? '#e11d48' : '#0F2240'}
           />
         </button>
-        <button
-          type="button"
-          aria-label="Comment"
-          className="text-[#0F2240]/60"
+        <a
+          href={`/posts/${post.id}#comments`}
+          aria-label="Comments"
+          className="flex items-center justify-center p-1 -m-1 text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
         >
           <MessageCircle size={24} strokeWidth={1.8} />
-        </button>
+        </a>
       </div>
 
       {/* Below image */}
       <div className="px-3 pt-1.5 pb-3 flex flex-col gap-1">
 
-        {/* Like count */}
+        {/* Like + comment counts */}
         <p className="text-[12px] font-semibold text-[#0F2240]">
           {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+          <span className="font-normal text-[#0F2240]/45 ml-2">
+            {post.comment_count ?? 0} {(post.comment_count ?? 0) === 1 ? 'comment' : 'comments'}
+          </span>
         </p>
 
         {/* Caption */}
@@ -196,9 +199,12 @@ export default function PostCard({ post, isLiked: initialIsLiked, currentUserId 
         )}
 
         {/* Comment count */}
-        <p className="text-[12px] text-[#0F2240]/45">
+        <a
+          href={`/posts/${post.id}#comments`}
+          className="text-[12px] text-[#0F2240]/45 hover:text-[#0F2240]/70 transition-colors"
+        >
           View all {post.comment_count ?? 0} comments
-        </p>
+        </a>
       </div>
     </article>
   )

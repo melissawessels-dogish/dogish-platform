@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import CommentsSection, { type Comment } from '@/components/CommentsSection'
 
 type Author = {
   id: string
@@ -53,46 +55,53 @@ export default async function PostPage({
 }) {
   const { id } = await params
   const admin = createAdminClient()
+  const supabase = await createClient()
 
-  const { data: post } = await admin
-    .from('post')
-    .select(`
-      id,
-      body,
-      images,
-      created_at,
-      like_count,
-      comment_count,
-      author:human!author_id (
-        id,
-        display_name,
-        username,
-        avatar
-      ),
-      post_dogs (
-        dog (
-          id,
-          name,
-          avatar
-        )
-      )
-    `)
-    .eq('id', id)
-    .maybeSingle()
+  const [postResult, commentsResult, sessionResult] = await Promise.all([
+    admin
+      .from('post')
+      .select(`
+        id, body, images, created_at, like_count, comment_count,
+        author:human!author_id ( id, display_name, username, avatar ),
+        post_dogs ( dog ( id, name, avatar ) )
+      `)
+      .eq('id', id)
+      .maybeSingle(),
 
-  if (!post) {
-    notFound()
-  }
+    admin
+      .from('comment')
+      .select(`
+        id, body, created_at,
+        author:human!author_id ( id, display_name, username, avatar )
+      `)
+      .eq('post_id', id)
+      .order('created_at', { ascending: true }),
 
-  const p = post as unknown as Post
+    supabase.auth.getUser(),
+  ])
+
+  if (!postResult.data) notFound()
+
+  const p = postResult.data as unknown as Post
   const author = p.author
   const taggedDogs = p.post_dogs ?? []
   const image = p.images?.[0] ?? null
   const likeCount = p.like_count ?? 0
-  const commentCount = p.comment_count ?? 0
+  const comments = (commentsResult.data ?? []) as unknown as Comment[]
+
+  const sessionUser = sessionResult.data.user
+  let currentUser: Author | null = null
+  if (sessionUser) {
+    const { data: me } = await supabase
+      .from('human')
+      .select('id, display_name, username, avatar')
+      .eq('id', sessionUser.id)
+      .maybeSingle()
+    currentUser = me as Author | null
+  }
 
   return (
-    <div className="min-h-svh bg-white">
+    <div className="min-h-svh bg-white pb-6">
       <div className="max-w-[640px] mx-auto">
 
         {/* Back navigation */}
@@ -140,7 +149,6 @@ export default async function PostPage({
 
         {/* Actions + stats */}
         <div className="px-4 pt-3 pb-1">
-          {/* Like and comment buttons */}
           <div className="flex items-center gap-4 mb-2">
             <button
               type="button"
@@ -151,39 +159,46 @@ export default async function PostPage({
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             </button>
-            <button
-              type="button"
+            <a
+              href="#comments"
               className="flex items-center gap-1.5 text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
-              aria-label="Comment"
+              aria-label="Comments"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-            </button>
+            </a>
           </div>
 
-          {/* Like + comment counts */}
-          <p className="text-[12px] text-[#0F2240]/45">
-            <span className="font-semibold text-[#0F2240]">{likeCount}</span> like{likeCount !== 1 ? 's' : ''}
-            {' · '}
-            <span className="font-semibold text-[#0F2240]">{commentCount}</span> comment{commentCount !== 1 ? 's' : ''}
+          <p className="text-[12px] font-semibold text-[#0F2240]">
+            {likeCount} {likeCount === 1 ? 'like' : 'likes'}
           </p>
         </div>
 
+        {/* Caption */}
+        {p.body && (
+          <div className="px-4 pt-1 pb-1">
+            <p className="text-[14px] text-[#0F2240] leading-relaxed">
+              <span className="font-semibold mr-1">{author.username}</span>
+              {p.body}
+            </p>
+          </div>
+        )}
+
         {/* Tagged dogs */}
         {taggedDogs.length > 0 && (
-          <div className="px-4 pt-2 pb-1 flex items-center gap-3">
+          <div className="px-4 pt-2 pb-1 flex items-center gap-3 flex-wrap">
             {taggedDogs.map(({ dog }) => (
               <Link
                 key={dog.id}
                 href={author.username ? `/${author.username}/${dog.name.toLowerCase()}` : '/'}
                 className="flex items-center gap-1.5 group"
               >
-                <div className="relative w-7 h-7 rounded-full overflow-hidden bg-[#EDE3D6] shrink-0 group-hover:ring-2 group-hover:ring-[#0F2240] transition-all">
+                <div className="relative w-6 h-6 rounded-full overflow-hidden bg-[#EDE3D6] shrink-0 group-hover:ring-2 group-hover:ring-[#0F2240] transition-all">
                   {dog.avatar ? (
                     <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
                   ) : (
-                    <div className="flex items-center justify-center h-full text-xs font-bold text-[#0F2240]/40">
+                    <div className="flex items-center justify-center h-full text-[10px] font-bold text-[#0F2240]/40">
                       {dog.name[0].toUpperCase()}
                     </div>
                   )}
@@ -196,17 +211,12 @@ export default async function PostPage({
           </div>
         )}
 
-        {/* Caption */}
-        {p.body && (
-          <div className="px-4 pt-2 pb-5">
-            <p className="text-[14px] text-[#0F2240]/85 leading-relaxed">
-              <span className="font-semibold text-[#0F2240] mr-1">
-                {author.username}
-              </span>
-              {p.body}
-            </p>
-          </div>
-        )}
+        {/* Comments section */}
+        <CommentsSection
+          postId={p.id}
+          initialComments={comments}
+          currentUser={currentUser}
+        />
 
       </div>
     </div>
