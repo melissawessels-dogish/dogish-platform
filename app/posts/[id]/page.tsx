@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CommentsSection, { type Comment } from '@/components/CommentsSection'
+import LikeButton from '@/components/LikeButton'
 
 type Author = {
   id: string
@@ -91,20 +92,30 @@ export default async function PostPage({
 
   const sessionUser = sessionResult.data.user
   let currentUser: Author | null = null
+  let isLiked = false
+
   if (sessionUser) {
-    const { data: me } = await supabase
-      .from('human')
-      .select('id, display_name, username, avatar')
-      .eq('id', sessionUser.id)
-      .maybeSingle()
-    currentUser = me as Author | null
+    const [meResult, likeResult] = await Promise.all([
+      supabase
+        .from('human')
+        .select('id, display_name, username, avatar')
+        .eq('id', sessionUser.id)
+        .maybeSingle(),
+      supabase
+        .from('like_')
+        .select('post_id')
+        .eq('human_id', sessionUser.id)
+        .eq('post_id', id)
+        .maybeSingle(),
+    ])
+    currentUser = meResult.data as Author | null
+    isLiked = !!likeResult.data
   }
 
   return (
     <div className="min-h-svh bg-white pb-6">
-      <div className="max-w-[640px] mx-auto">
+      <div className="max-w-lg mx-auto">
 
-        {/* Back navigation */}
         <div className="px-4 pt-4 pb-2">
           <Link
             href={author.username ? `/${author.username}` : '/'}
@@ -117,7 +128,6 @@ export default async function PostPage({
           </Link>
         </div>
 
-        {/* Author row */}
         <div className="px-4 py-3 flex items-center gap-3">
           <div className="relative w-9 h-9 rounded-full overflow-hidden bg-[#EDE3D6] shrink-0">
             {author.avatar ? (
@@ -140,25 +150,21 @@ export default async function PostPage({
           </div>
         </div>
 
-        {/* Photo */}
+        {/* Photo — full-bleed within the max-w-lg column */}
         {image && (
-          <div className="mx-auto w-full max-w-2xl aspect-[4/5] max-h-[85vh] relative overflow-hidden bg-[#F7F3EE]">
-            <Image src={image} alt="" fill className="object-contain" priority />
+          <div className="w-full aspect-[4/5] relative overflow-hidden bg-[#F7F3EE]">
+            <Image src={image} alt="" fill className="object-cover" priority />
           </div>
         )}
 
-        {/* Actions + stats */}
+        {/* Like + comment actions */}
         <div className="px-4 pt-3 pb-1">
-          <div className="flex items-center gap-4 mb-2">
-            <button
-              type="button"
-              className="flex items-center gap-1.5 text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
-              aria-label="Like"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-            </button>
+          <div className="flex items-center gap-4 mb-1">
+            <LikeButton
+              postId={p.id}
+              initialLikeCount={likeCount}
+              initialIsLiked={isLiked}
+            />
             <a
               href="#comments"
               className="flex items-center gap-1.5 text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
@@ -169,10 +175,6 @@ export default async function PostPage({
               </svg>
             </a>
           </div>
-
-          <p className="text-[12px] font-semibold text-[#0F2240]">
-            {likeCount} {likeCount === 1 ? 'like' : 'likes'}
-          </p>
         </div>
 
         {/* Caption */}
@@ -221,4 +223,5 @@ export default async function PostPage({
       </div>
     </div>
   )
+
 }

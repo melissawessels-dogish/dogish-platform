@@ -1,3 +1,5 @@
+import AppShell from '@/components/AppShell'
+
 export default function SearchLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>
+  return <AppShell>{children}</AppShell>
 }

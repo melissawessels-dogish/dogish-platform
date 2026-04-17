@@ -66,38 +66,32 @@ function Avatar({
   )
 }
 
-function SuggestedPerson({
-  person,
-  onFollowed,
-}: {
-  person: HumanResult
-  onFollowed: (id: string) => void
-}) {
+function SuggestedPerson({ person }: { person: HumanResult }) {
+  const [isFollowing, setIsFollowing] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const handleFollow = () => {
-    onFollowed(person.id) // optimistic remove
+    if (isFollowing) return
+    setIsFollowing(true) // optimistic
     startTransition(async () => {
-      await followHuman(person.id, person.username ?? '')
+      try {
+        await followHuman(person.id, person.username ?? '')
+      } catch {
+        setIsFollowing(false) // revert on error
+      }
     })
   }
 
   return (
     <div className="flex items-center gap-3 px-4 py-2.5">
-      <Link
-        href={person.username ? `/${person.username}` : '/'}
-        className="shrink-0"
-      >
+      <Link href={person.username ? `/${person.username}` : '/'} className="shrink-0">
         <Avatar
           src={person.avatar}
           alt={person.display_name ?? person.username ?? ''}
           fallback={person.display_name ?? person.username ?? '?'}
         />
       </Link>
-      <Link
-        href={person.username ? `/${person.username}` : '/'}
-        className="min-w-0 flex-1"
-      >
+      <Link href={person.username ? `/${person.username}` : '/'} className="min-w-0 flex-1">
         <p className="text-[14px] font-semibold text-[#0F2240] leading-tight truncate">
           {person.display_name ?? person.username}
         </p>
@@ -107,15 +101,21 @@ function SuggestedPerson({
           </p>
         )}
       </Link>
-      <button
-        type="button"
-        onClick={handleFollow}
-        disabled={isPending}
-        className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-full text-white disabled:opacity-50 transition-opacity"
-        style={{ backgroundColor: '#0F2240' }}
-      >
-        Follow
-      </button>
+      {isFollowing ? (
+        <span className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-full border border-[#0F2240]/20 text-[#0F2240]/45">
+          Following
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={handleFollow}
+          disabled={isPending}
+          className="shrink-0 text-[12px] font-semibold px-3 py-1 rounded-full text-white disabled:opacity-50 transition-opacity"
+          style={{ backgroundColor: '#0F2240' }}
+        >
+          Follow
+        </button>
+      )}
     </div>
   )
 }
@@ -285,13 +285,7 @@ export default function SearchPage() {
               Find your pack
             </p>
             {suggestions.map((person) => (
-              <SuggestedPerson
-                key={person.id}
-                person={person}
-                onFollowed={(id) =>
-                  setSuggestions((prev) => prev.filter((p) => p.id !== id))
-                }
-              />
+              <SuggestedPerson key={person.id} person={person} />
             ))}
           </section>
         )}
