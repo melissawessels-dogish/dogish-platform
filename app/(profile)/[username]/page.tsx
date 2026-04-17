@@ -1,9 +1,11 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import FollowButton from '@/components/FollowButton'
+import FollowButton from '@/components/follow-button'
 
 type Dog = {
   id: string
@@ -19,6 +21,7 @@ type Human = {
   bio: string | null
   location: string | null
   follower_count: number | null
+  following_count: number | null
 }
 
 export default async function ProfilePage({
@@ -32,7 +35,7 @@ export default async function ProfilePage({
 
   const { data: human } = await admin
     .from('human')
-    .select('id, display_name, username, avatar, bio, location, follower_count')
+    .select('id, display_name, username, avatar, bio, location, follower_count, following_count')
     .eq('username', username)
     .maybeSingle()
 
@@ -166,13 +169,20 @@ export default async function ProfilePage({
                 >
                   Edit profile
                 </Link>
+              ) : !user ? (
+                <Link
+                  href="/login"
+                  className="text-[13px] font-semibold px-6 py-1.5 rounded-full bg-[#0F2240] text-white hover:bg-[#0F2240]/90 transition-colors whitespace-nowrap"
+                >
+                  Join their pack
+                </Link>
               ) : (
                 <FollowButton
                   targetType="human"
                   targetId={h.id}
-                  targetUsername={h.username}
-                  isFollowing={isFollowing}
-                  followerCount={followerCount}
+                  targetUsername={h.username ?? ''}
+                  initialFollowing={isFollowing}
+                  initialFollowerCount={followerCount}
                 />
               )}
             </div>
@@ -205,7 +215,7 @@ export default async function ProfilePage({
             </span>
             <span className="select-none">·</span>
             <span>
-              <span className="font-semibold text-[#0F2240]">0</span> Following
+              <span className="font-semibold text-[#0F2240]">{h.following_count ?? 0}</span> Following
             </span>
           </div>
         </div>

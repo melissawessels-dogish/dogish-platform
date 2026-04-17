@@ -142,8 +142,8 @@ export default async function PostPage({
 
         {/* Photo */}
         {image && (
-          <div className="relative w-full aspect-[4/5] max-h-[85vh] overflow-hidden bg-[#F7F3EE]">
-            <Image src={image} alt="" fill className="object-cover" priority />
+          <div className="mx-auto w-full max-w-2xl aspect-[4/5] max-h-[85vh] relative overflow-hidden bg-[#F7F3EE]">
+            <Image src={image} alt="" fill className="object-contain" priority />
           </div>
         )}
 

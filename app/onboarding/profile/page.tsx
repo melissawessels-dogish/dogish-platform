@@ -25,6 +25,7 @@ export default function ProfileSetupPage() {
 
   // Human avatar
   const avatarInputRef = useRef<HTMLInputElement>(null)
+  const usernameInputRef = useRef<HTMLInputElement>(null)
   const [avatar, setAvatar] = useState<string | null>(null)
   const [avatarUploading, setAvatarUploading] = useState(false)
 
@@ -32,7 +33,7 @@ export default function ProfileSetupPage() {
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [displayNameTouched, setDisplayNameTouched] = useState(false)
+  const hasEditedDisplayName = useRef(false)
 
   const [username, setUsername] = useState('')
   const [usernameCustomized, setUsernameCustomized] = useState(false)
@@ -100,7 +101,7 @@ export default function ProfileSetupPage() {
   // ── Name fields ───────────────────────────────────────────────
   const handleFirstNameChange = (value: string) => {
     setFirstName(value)
-    if (!displayNameTouched) setDisplayName(value)
+    if (!hasEditedDisplayName.current) setDisplayName(value)
     if (!usernameCustomized) setUsername(toSlug(value, lastName))
   }
 
@@ -110,8 +111,8 @@ export default function ProfileSetupPage() {
   }
 
   const handleDisplayNameChange = (value: string) => {
+    hasEditedDisplayName.current = true
     setDisplayName(value)
-    setDisplayNameTouched(true)
   }
 
   // ── Username ──────────────────────────────────────────────────
@@ -143,15 +144,24 @@ export default function ProfileSetupPage() {
     return !!existing
   }
 
+  const applyTakenUsername = (taken: string) => {
+    const suggestion = `${taken}2`
+    setUsernameEditable(true)
+    setUsernameCustomized(true)
+    setUsername(suggestion)
+    setUsernameSuggestion(suggestion)
+    setUsernameError(null)
+    setTimeout(() => usernameInputRef.current?.focus(), 0)
+  }
+
   const handleUsernameBlur = async () => {
     const trimmed = username.trim()
-    if (!trimmed || usernameError) return
+    if (!trimmed || !USERNAME_RE.test(trimmed)) return
     const taken = await checkUsernameTaken(trimmed)
     if (taken) {
-      setUsernameError('That profile link is taken')
-      setUsernameEditable(true)
-      setUsernameCustomized(true)
-      setUsernameSuggestion(`${trimmed}2`)
+      applyTakenUsername(trimmed)
+    } else {
+      setUsernameSuggestion(null)
     }
   }
 
@@ -183,10 +193,7 @@ export default function ProfileSetupPage() {
       if (username) {
         const taken = await checkUsernameTaken(username)
         if (taken) {
-          setUsernameError('That profile link is taken')
-          setUsernameEditable(true)
-          setUsernameCustomized(true)
-          setUsernameSuggestion(`${username}2`)
+          applyTakenUsername(username)
           setSubmitting(false)
           return
         }
@@ -393,11 +400,12 @@ export default function ProfileSetupPage() {
               </span>
               {usernameEditable ? (
                 <input
+                  ref={usernameInputRef}
                   type="text"
                   value={username}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   onBlur={handleUsernameBlur}
-                  placeholder={usernameSuggestion ?? 'yourname'}
+                  placeholder="yourname"
                   className="flex-1 h-10 px-3 text-sm text-[#0F2240] bg-white outline-none placeholder:text-[#0F2240]/30"
                 />
               ) : (
@@ -408,6 +416,9 @@ export default function ProfileSetupPage() {
             </div>
             {usernameError && (
               <p className="text-xs text-red-600">{usernameError}</p>
+            )}
+            {!usernameError && usernameSuggestion && (
+              <p className="text-xs text-[#0F2240]/50">That profile link is taken — we&apos;ve suggested an alternative.</p>
             )}
           </div>
 

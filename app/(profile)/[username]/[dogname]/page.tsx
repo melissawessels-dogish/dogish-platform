@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import FollowButton from '@/components/FollowButton'
+import FollowButton from '@/components/follow-button'
 
 type DogPage = {
   id: string
@@ -112,13 +112,14 @@ export default async function DogProfilePage({
 
   const { data: postDogs } = await admin
     .from('post_dogs')
-    .select('post:post_id ( id, images, created_at )')
+    .select('post:post_id ( id, images, created_at, is_private )')
     .eq('dog_id', d.id)
     .order('created_at', { ascending: false, referencedTable: 'post' })
 
   const dogPosts = (postDogs ?? [])
-    .map((r) => r.post as { id: string; images: string[] | null } | null)
-    .filter((p): p is { id: string; images: string[] | null } => p !== null)
+    .map((r) => r.post as { id: string; images: string[] | null; is_private: boolean } | null)
+    .filter((p): p is { id: string; images: string[] | null; is_private: boolean } => p !== null)
+    .filter((p) => !p.is_private || isOwnDog)
 
   return (
     <div className="min-h-svh bg-white">
@@ -157,41 +158,48 @@ export default async function DogProfilePage({
             )}
           </div>
 
-          {/* Action button */}
-          <div className="flex justify-end pt-3">
-            {isOwnDog ? (
-              <Link
-                href={`/${owner.username}/${d.name.toLowerCase()}/edit`}
-                className="text-sm font-medium px-4 py-1.5 rounded-full border border-[#0F2240]/20 text-[#0F2240] hover:bg-[#F7F3EE] transition-colors"
-              >
-                Edit
-              </Link>
-            ) : (
-              <FollowButton
-                targetType="dog"
-                targetId={d.id}
-                targetUsername={username}
-                isFollowing={isFollowingDog}
-                followerCount={d.follower_count ?? 0}
-              />
-            )}
-          </div>
-
-          {/* Identity */}
-          <div className="mt-3 pb-1">
-            <h1 className="text-xl font-bold text-[#0F2240] leading-tight">{d.name}</h1>
-            {allBreeds && (
-              <p className="text-sm text-[#0F2240]/50 mt-0.5">{allBreeds}</p>
-            )}
-            <p className="text-sm text-[#0F2240]/40 mt-1">
-              by{' '}
-              <Link
-                href={`/${owner.username}`}
-                className="text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
-              >
-                @{owner.username}
-              </Link>
-            </p>
+          {/* Identity + action button */}
+          <div className="flex items-start justify-between gap-3 mt-3">
+            <div className="min-w-0 pb-1">
+              <h1 className="text-xl font-bold text-[#0F2240] leading-tight">{d.name}</h1>
+              {allBreeds && (
+                <p className="text-sm text-[#0F2240]/50 mt-0.5">{allBreeds}</p>
+              )}
+              <p className="text-sm text-[#0F2240]/40 mt-1">
+                by{' '}
+                <Link
+                  href={`/${owner.username}`}
+                  className="text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
+                >
+                  @{owner.username}
+                </Link>
+              </p>
+            </div>
+            <div className="shrink-0 pt-1">
+              {isOwnDog ? (
+                <Link
+                  href={`/${owner.username}/${d.name.toLowerCase()}/edit`}
+                  className="text-sm font-medium px-4 py-1.5 rounded-full border border-[#0F2240]/20 text-[#0F2240] hover:bg-[#F7F3EE] transition-colors whitespace-nowrap"
+                >
+                  Edit {d.name}
+                </Link>
+              ) : !user ? (
+                <Link
+                  href="/login"
+                  className="text-[13px] font-semibold px-6 py-1.5 rounded-full bg-[#0F2240] text-white hover:bg-[#0F2240]/90 transition-colors whitespace-nowrap"
+                >
+                  Join their pack
+                </Link>
+              ) : (
+                <FollowButton
+                  targetType="dog"
+                  targetId={d.id}
+                  initialFollowing={isFollowingDog}
+                  initialFollowerCount={d.follower_count ?? 0}
+                  packName={d.name.endsWith('s') ? `${d.name}'` : `${d.name}'s`}
+                />
+              )}
+            </div>
           </div>
 
           {/* Bio */}

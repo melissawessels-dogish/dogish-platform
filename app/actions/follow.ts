@@ -6,49 +6,67 @@ import { revalidatePath } from 'next/cache'
 export async function followHuman(targetHumanId: string, targetUsername: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  if (!user) throw new Error('Not authenticated')
+  if (targetHumanId === user.id) throw new Error('Cannot follow yourself')
 
-  await supabase.from('follow').insert({
-    follower_id: user.id,
-    target_type: 'human',
-    target_human_id: targetHumanId,
-  })
+  const { error } = await supabase
+    .from('follow')
+    .insert({
+      follower_id: user.id,
+      target_type: 'human',
+      target_human_id: targetHumanId,
+    })
+  if (error && error.code !== '23505') throw error
+
   revalidatePath(`/${targetUsername}`)
 }
 
 export async function unfollowHuman(targetHumanId: string, targetUsername: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  if (!user) throw new Error('Not authenticated')
 
-  await supabase.from('follow')
+  const { error } = await supabase.from('follow')
     .delete()
     .eq('follower_id', user.id)
     .eq('target_human_id', targetHumanId)
+  if (error) throw new Error(error.message)
+
   revalidatePath(`/${targetUsername}`)
 }
 
-export async function followDog(targetDogId: string, revalidateUrl: string) {
+export async function followDog(targetDogId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  if (!user) throw new Error('Not authenticated')
 
-  await supabase.from('follow').insert({
+  const { data: dog } = await supabase
+    .from('dog')
+    .select('owner_id')
+    .eq('id', targetDogId)
+    .maybeSingle()
+  if (dog?.owner_id === user.id) throw new Error('Cannot follow your own dog')
+
+  const { error } = await supabase.from('follow').insert({
     follower_id: user.id,
     target_type: 'dog',
     target_dog_id: targetDogId,
   })
-  revalidatePath(revalidateUrl)
+  if (error && error.code !== '23505') throw new Error(error.message)
+
+  revalidatePath('/', 'layout')
 }
 
-export async function unfollowDog(targetDogId: string, revalidateUrl: string) {
+export async function unfollowDog(targetDogId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  if (!user) throw new Error('Not authenticated')
 
-  await supabase.from('follow')
+  const { error } = await supabase.from('follow')
     .delete()
     .eq('follower_id', user.id)
     .eq('target_dog_id', targetDogId)
-  revalidatePath(revalidateUrl)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/', 'layout')
 }
