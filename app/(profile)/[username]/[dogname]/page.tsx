@@ -142,40 +142,25 @@ export default async function DogProfilePage({
           </Link>
         </div>
 
-        {/* Avatar + action row */}
-        <div className="relative px-4">
-          {/* Avatar */}
-          <div
-            className="absolute -top-12 left-4 w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-[#F7F3EE]"
-            style={{ boxShadow: '0 2px 8px rgba(15,34,64,0.12)' }}
-          >
-            {d.avatar ? (
-              <Image src={d.avatar} alt={d.name} fill className="object-cover" />
-            ) : (
-              <div className="flex items-center justify-center h-full text-3xl font-bold text-[#0F2240]/30">
-                {d.name[0].toUpperCase()}
-              </div>
-            )}
-          </div>
-
-          {/* Identity + action button */}
-          <div className="flex items-start justify-between gap-3 mt-3">
-            <div className="min-w-0 pb-1">
-              <h1 className="text-xl font-bold text-[#0F2240] leading-tight">{d.name}</h1>
-              {allBreeds && (
-                <p className="text-sm text-[#0F2240]/50 mt-0.5">{allBreeds}</p>
+        {/* Avatar + action row — pulled up to overlap cover */}
+        <div className="relative z-10 px-4 -mt-12 pb-6">
+          <div className="flex items-end justify-between gap-3">
+            {/* Avatar */}
+            <div
+              className="relative w-24 h-24 rounded-full border-4 border-white overflow-hidden bg-[#F7F3EE] shrink-0"
+              style={{ boxShadow: '0 2px 8px rgba(15,34,64,0.12)' }}
+            >
+              {d.avatar ? (
+                <Image src={d.avatar} alt={d.name} fill className="object-cover" />
+              ) : (
+                <div className="flex items-center justify-center h-full text-3xl font-bold text-[#0F2240]/30">
+                  {d.name[0].toUpperCase()}
+                </div>
               )}
-              <p className="text-sm text-[#0F2240]/40 mt-1">
-                by{' '}
-                <Link
-                  href={`/${owner.username}`}
-                  className="text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
-                >
-                  @{owner.username}
-                </Link>
-              </p>
             </div>
-            <div className="shrink-0 pt-1">
+
+            {/* Action button */}
+            <div className="shrink-0 pb-1">
               {isOwnDog ? (
                 <Link
                   href={`/${owner.username}/${d.name.toLowerCase()}/edit`}
@@ -199,6 +184,32 @@ export default async function DogProfilePage({
                   packName={d.name.endsWith('s') ? `${d.name}'` : `${d.name}'s`}
                 />
               )}
+            </div>
+          </div>
+
+          {/* Name / breed / owner / stats */}
+          <div className="mt-3">
+            <h1 className="text-xl font-bold text-[#0F2240] leading-tight">{d.name}</h1>
+            {allBreeds && (
+              <p className="text-sm text-[#0F2240]/50 mt-0.5">{allBreeds}</p>
+            )}
+            <p className="text-sm text-[#0F2240]/40 mt-1">
+              by{' '}
+              <Link
+                href={`/${owner.username}`}
+                className="text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
+              >
+                @{owner.username}
+              </Link>
+            </p>
+            <div className="flex items-center gap-1.5 mt-2 text-[13px] text-[#0F2240]/50">
+              <span>
+                <span className="font-semibold text-[#0F2240]">{dogPosts.length}</span> Posts
+              </span>
+              <span className="select-none">·</span>
+              <span>
+                <span className="font-semibold text-[#0F2240]">{d.follower_count ?? 0}</span> Followers
+              </span>
             </div>
           </div>
 
@@ -231,7 +242,7 @@ export default async function DogProfilePage({
                   className="px-2.5 py-1 rounded-full text-xs font-medium text-white"
                   style={{ backgroundColor: '#C4855A' }}
                 >
-                  {tag}
+                  {tag.toLowerCase() === 'none' ? 'No known allergies' : tag}
                 </span>
               ))}
             </div>
@@ -315,20 +326,6 @@ export default async function DogProfilePage({
 
       </div>
 
-      {/* FAB — new post pre-tagged to this dog, own dog only */}
-      {isOwnDog && (
-        <Link
-          href={`/posts/new?dog=${d.id}`}
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
-          style={{ backgroundColor: '#0F2240' }}
-          aria-label="New post"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </Link>
-      )}
     </div>
   )
 }

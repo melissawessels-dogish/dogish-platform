@@ -282,7 +282,7 @@ function TagSelector({
             selectedSet.has(tag) ? colorClass : emptyClass
           }`}
         >
-          {tag}
+          {tag.toLowerCase() === 'none' ? 'No known allergies' : tag}
         </button>
       ))}
     </div>

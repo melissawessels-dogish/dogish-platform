@@ -252,20 +252,6 @@ export default async function ProfilePage({
 
       </div>
 
-      {/* Floating new post button — own profile only */}
-      {isOwnProfile && (
-        <Link
-          href="/posts/new"
-          className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
-          style={{ backgroundColor: '#0F2240' }}
-          aria-label="New post"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </Link>
-      )}
     </div>
   )
 }
