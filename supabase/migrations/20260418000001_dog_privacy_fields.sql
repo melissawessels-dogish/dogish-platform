@@ -1,0 +1,2 @@
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS allergies_public boolean NOT NULL DEFAULT true;
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS diet_public boolean NOT NULL DEFAULT true;

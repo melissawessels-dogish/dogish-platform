@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import Image from 'next/image'
 
 type DogSize = 'xs' | 'small' | 'medium' | 'large' | 'xl'
@@ -31,7 +32,10 @@ interface FormData {
   personalityTags: string[]
   allergies: string[]
   allergyInput: string
+  diet: string[]
   isPrivate: boolean
+  allergiesPublic: boolean
+  dietPublic: boolean
 }
 
 const PERSONALITY_TAGS = [
@@ -45,6 +49,16 @@ const PERSONALITY_TAGS = [
 const COMMON_ALLERGIES = [
   'none', 'chicken', 'beef', 'wheat', 'corn', 'soy',
   'dairy', 'eggs', 'fish', 'lamb', 'pork',
+]
+
+const DIET_OPTIONS = [
+  'kibble',
+  'canned',
+  'fresh/gently-cooked (commercial)',
+  'dehydrated/freeze-dried',
+  'raw',
+  'home-cooked',
+  'mixed/combination',
 ]
 
 const SIZE_OPTIONS: { value: DogSize; label: string; range: string }[] = [
@@ -303,7 +317,10 @@ function emptyForm(name = '', avatarPreview: string | null = null): FormData {
     personalityTags: [],
     allergies: [],
     allergyInput: '',
+    diet: [],
     isPrivate: false,
+    allergiesPublic: true,
+    dietPublic: true,
   }
 }
 
@@ -371,6 +388,9 @@ export default function OnboardingDogsPage() {
     }
   }
 
+  const toggleDiet = (tag: string) =>
+    update({ diet: form.diet.includes(tag) ? form.diet.filter((t) => t !== tag) : [...form.diet, tag] })
+
   const addCustomAllergy = () => {
     const val = form.allergyInput.trim().toLowerCase()
     if (val && !form.allergies.includes(val)) {
@@ -423,8 +443,11 @@ export default function OnboardingDogsPage() {
         bio: form.bio.trim() || null,
         allergies: form.allergies.length > 0 ? form.allergies : null,
         personality_tags: form.personalityTags.length > 0 ? form.personalityTags : null,
+        diet: form.diet.length > 0 ? form.diet : null,
         mix_description: form.mixDescription.trim() || null,
         is_private: form.isPrivate,
+        allergies_public: form.allergiesPublic,
+        diet_public: form.dietPublic,
       }
 
       const { error: dogError } = await supabase
@@ -643,6 +666,31 @@ export default function OnboardingDogsPage() {
                   <Button type="button" variant="outline" onClick={addCustomAllergy} className="border-[#0F2240]/20 text-[#0F2240] hover:bg-[#EDE3D6] shrink-0">
                     Add
                   </Button>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <Label className="text-sm text-[#0F2240]/70 font-normal">Share allergies on profile</Label>
+                  <Switch
+                    checked={form.allergiesPublic}
+                    onCheckedChange={(v) => update({ allergiesPublic: v })}
+                    className="data-[state=checked]:bg-[#0F2240]"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2.5">
+                <Label className="text-[#0F2240] font-medium text-sm">Diet</Label>
+                <TagSelector
+                  tags={DIET_OPTIONS}
+                  selected={form.diet}
+                  onToggle={toggleDiet}
+                />
+                <div className="flex items-center justify-between pt-1">
+                  <Label className="text-sm text-[#0F2240]/70 font-normal">Share diet on profile</Label>
+                  <Switch
+                    checked={form.dietPublic}
+                    onCheckedChange={(v) => update({ dietPublic: v })}
+                    className="data-[state=checked]:bg-[#0F2240]"
+                  />
                 </div>
               </div>
 

@@ -15,7 +15,10 @@ type DogPage = {
   birthday: string | null
   personality_tags: string[] | null
   allergies: string[] | null
+  diet: string[] | null
   is_private: boolean
+  allergies_public: boolean
+  diet_public: boolean
   owner_id: string
   follower_count: number | null
   dog_breeds: {
@@ -69,7 +72,10 @@ export default async function DogProfilePage({
       birthday,
       personality_tags,
       allergies,
+      diet,
       is_private,
+      allergies_public,
+      diet_public,
       owner_id,
       follower_count,
       dog_breeds(
@@ -233,22 +239,51 @@ export default async function DogProfilePage({
             </div>
           )}
 
-          {/* Allergy chips */}
-          {d.allergies && d.allergies.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2 pb-4">
-              {d.allergies.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2.5 py-1 rounded-full text-xs font-medium text-white"
-                  style={{ backgroundColor: '#C4855A' }}
-                >
-                  {tag.toLowerCase() === 'none' ? 'No known allergies' : tag}
-                </span>
-              ))}
+          {/* Diet + allergy chips */}
+          {((isOwnDog || d.diet_public) && d.diet && d.diet.length > 0) || ((isOwnDog || d.allergies_public) && d.allergies && d.allergies.length > 0) ? (
+            <div className="mt-2 pb-4">
+              {(isOwnDog || d.diet_public) && d.diet && d.diet.length > 0 && (
+                <>
+                  <p className="text-xs font-medium text-[#0F2240]/40 mb-1.5">Diet</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {d.diet.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2.5 py-1 rounded-full text-xs font-medium"
+                        style={{ backgroundColor: '#F7F3EE', color: '#0F2240' }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {(isOwnDog || d.allergies_public) && d.allergies && d.allergies.length > 0 && d.allergies.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                        style={{ backgroundColor: '#C4855A' }}
+                      >
+                        {tag.toLowerCase() === 'none' ? 'No known allergies' : tag}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              )}
+              {(isOwnDog || d.allergies_public) && d.allergies && d.allergies.length > 0 && (!d.diet || d.diet.length === 0 || !(isOwnDog || d.diet_public)) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {d.allergies.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium text-white"
+                      style={{ backgroundColor: '#C4855A' }}
+                    >
+                      {tag.toLowerCase() === 'none' ? 'No known allergies' : tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
 
-          {!d.bio && (!d.personality_tags || d.personality_tags.length === 0) && (!d.allergies || d.allergies.length === 0) && (
+          {!d.bio && (!d.personality_tags || d.personality_tags.length === 0) && (!(isOwnDog || d.allergies_public) || !d.allergies || d.allergies.length === 0) && (!(isOwnDog || d.diet_public) || !d.diet || d.diet.length === 0) && (
             <div className="pb-4" />
           )}
         </div>

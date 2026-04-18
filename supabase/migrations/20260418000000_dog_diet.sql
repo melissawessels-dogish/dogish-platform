@@ -1,0 +1,1 @@
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS diet text[];

@@ -31,7 +31,10 @@ interface FormData {
   personalityTags: string[]
   allergies: string[]
   allergyInput: string
+  diet: string[]
   isPrivate: boolean
+  allergiesPublic: boolean
+  dietPublic: boolean
 }
 
 const PERSONALITY_TAGS = [
@@ -45,6 +48,16 @@ const PERSONALITY_TAGS = [
 const COMMON_ALLERGIES = [
   'None', 'chicken', 'beef', 'wheat', 'corn', 'soy',
   'dairy', 'eggs', 'fish', 'lamb', 'pork',
+]
+
+const DIET_OPTIONS = [
+  'kibble',
+  'canned',
+  'fresh/gently-cooked (commercial)',
+  'dehydrated/freeze-dried',
+  'raw',
+  'home-cooked',
+  'mixed/combination',
 ]
 
 const SIZE_OPTIONS: { value: DogSize; label: string; range: string }[] = [
@@ -318,7 +331,10 @@ export default function NewDogPage() {
     personalityTags: [],
     allergies: [],
     allergyInput: '',
+    diet: [],
     isPrivate: false,
+    allergiesPublic: true,
+    dietPublic: true,
   })
 
   // On mount: find dogs created during onboarding that have no breed set yet
@@ -383,6 +399,9 @@ export default function NewDogPage() {
     }
   }
 
+  const toggleDiet = (tag: string) =>
+    update({ diet: form.diet.includes(tag) ? form.diet.filter((t) => t !== tag) : [...form.diet, tag] })
+
   const addCustomAllergy = () => {
     const val = form.allergyInput.trim().toLowerCase()
     if (val && !form.allergies.includes(val)) {
@@ -438,8 +457,11 @@ export default function NewDogPage() {
         bio: form.bio.trim() || null,
         allergies: form.allergies.length > 0 ? form.allergies : null,
         personality_tags: form.personalityTags.length > 0 ? form.personalityTags : null,
+        diet: form.diet.length > 0 ? form.diet : null,
         mix_description: form.mixDescription.trim() || null,
         is_private: form.isPrivate,
+        allergies_public: form.allergiesPublic,
+        diet_public: form.dietPublic,
       }
 
       let savedDogId: string
@@ -494,7 +516,10 @@ export default function NewDogPage() {
           personalityTags: [],
           allergies: [],
           allergyInput: '',
+          diet: [],
           isPrivate: false,
+          allergiesPublic: true,
+          dietPublic: true,
         })
         setSubmitting(false)
         return
@@ -689,6 +714,31 @@ export default function NewDogPage() {
                         Add
                       </Button>
                     </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <Label className="text-sm text-[#0F2240]/70 font-normal">Share allergies on profile</Label>
+                      <Switch
+                        checked={form.allergiesPublic}
+                        onCheckedChange={(v) => update({ allergiesPublic: v })}
+                        className="data-[state=checked]:bg-[#0F2240]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <Label className="text-[#0F2240] font-medium text-sm">Diet</Label>
+                    <TagSelector
+                      tags={DIET_OPTIONS}
+                      selected={form.diet}
+                      onToggle={toggleDiet}
+                    />
+                    <div className="flex items-center justify-between pt-1">
+                      <Label className="text-sm text-[#0F2240]/70 font-normal">Share diet on profile</Label>
+                      <Switch
+                        checked={form.dietPublic}
+                        onCheckedChange={(v) => update({ dietPublic: v })}
+                        className="data-[state=checked]:bg-[#0F2240]"
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
@@ -809,7 +859,10 @@ export default function NewDogPage() {
                           personalityTags: [],
                           allergies: [],
                           allergyInput: '',
+                          diet: [],
                           isPrivate: false,
+                          allergiesPublic: true,
+                          dietPublic: true,
                         })
                       }}
                       className="text-sm text-[#0F2240]/40 hover:text-[#0F2240] transition-colors underline-offset-2 hover:underline"

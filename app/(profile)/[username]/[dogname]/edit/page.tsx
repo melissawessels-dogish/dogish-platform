@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 
 type DogSize = 'xs' | 'small' | 'medium' | 'large' | 'xl'
 type DogSex = 'male' | 'female' | 'unknown'
@@ -31,7 +32,10 @@ interface FormData {
   personalityTags: string[]
   allergies: string[]
   allergyInput: string
+  diet: string[]
   isPrivate: boolean
+  allergiesPublic: boolean
+  dietPublic: boolean
 }
 
 const PERSONALITY_TAGS = [
@@ -45,6 +49,16 @@ const PERSONALITY_TAGS = [
 const COMMON_ALLERGIES = [
   'none', 'chicken', 'beef', 'wheat', 'corn', 'soy',
   'dairy', 'eggs', 'fish', 'lamb', 'pork',
+]
+
+const DIET_OPTIONS = [
+  'kibble',
+  'canned',
+  'fresh/gently-cooked (commercial)',
+  'dehydrated/freeze-dried',
+  'raw',
+  'home-cooked',
+  'mixed/combination',
 ]
 
 const SIZE_OPTIONS: { value: DogSize; label: string; range: string }[] = [
@@ -252,7 +266,10 @@ export default function EditDogPage() {
     personalityTags: [],
     allergies: [],
     allergyInput: '',
+    diet: [],
     isPrivate: false,
+    allergiesPublic: true,
+    dietPublic: true,
   })
 
   useEffect(() => {
@@ -271,7 +288,7 @@ export default function EditDogPage() {
       // Find dog
       const { data: dogRows } = await supabase
         .from('dog')
-        .select(`id, name, avatar, bio, size, sex, birthday, personality_tags, allergies, mix_description, is_private, owner_id,
+        .select(`id, name, avatar, bio, size, sex, birthday, personality_tags, allergies, diet, mix_description, is_private, allergies_public, diet_public, owner_id,
           dog_breeds(is_primary, breed:breed_id(id, name))`)
         .eq('owner_id', owner.id)
         .ilike('name', dogname)
@@ -280,8 +297,8 @@ export default function EditDogPage() {
       const dog = dogRows?.[0] as {
         id: string; name: string; avatar: string | null; bio: string | null
         size: string | null; sex: string; birthday: string | null
-        personality_tags: string[] | null; allergies: string[] | null
-        mix_description: string | null; is_private: boolean; owner_id: string
+        personality_tags: string[] | null; allergies: string[] | null; diet: string[] | null
+        mix_description: string | null; is_private: boolean; allergies_public: boolean; diet_public: boolean; owner_id: string
         dog_breeds: { is_primary: boolean; breed: { id: string; name: string } | null }[]
       } | undefined
 
@@ -309,7 +326,10 @@ export default function EditDogPage() {
         personalityTags: dog.personality_tags ?? [],
         allergies: dog.allergies ?? [],
         allergyInput: '',
+        diet: dog.diet ?? [],
         isPrivate: dog.is_private,
+        allergiesPublic: dog.allergies_public,
+        dietPublic: dog.diet_public,
       })
       setLoaded(true)
     }
@@ -329,6 +349,9 @@ export default function EditDogPage() {
       update({ allergies: without.includes(tag) ? without.filter((t) => t !== tag) : [...without, tag] })
     }
   }
+
+  const toggleDiet = (tag: string) =>
+    update({ diet: form.diet.includes(tag) ? form.diet.filter((t) => t !== tag) : [...form.diet, tag] })
 
   const addCustomAllergy = () => {
     const val = form.allergyInput.trim().toLowerCase()
@@ -373,8 +396,11 @@ export default function EditDogPage() {
         bio: form.bio.trim() || null,
         allergies: form.allergies.length > 0 ? form.allergies : null,
         personality_tags: form.personalityTags.length > 0 ? form.personalityTags : null,
+        diet: form.diet.length > 0 ? form.diet : null,
         mix_description: form.mixDescription.trim() || null,
         is_private: form.isPrivate,
+        allergies_public: form.allergiesPublic,
+        diet_public: form.dietPublic,
       }).eq('id', dogId)
       if (dogError) throw dogError
 
@@ -521,6 +547,24 @@ export default function EditDogPage() {
             <TagSelector tags={PERSONALITY_TAGS} selected={form.personalityTags} onToggle={togglePersonalityTag} />
           </div>
 
+          {/* Diet */}
+          <div className="space-y-2.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Diet</Label>
+            <TagSelector
+              tags={DIET_OPTIONS}
+              selected={form.diet}
+              onToggle={toggleDiet}
+            />
+            <div className="flex items-center justify-between pt-1">
+              <Label className="text-sm text-[#0F2240]/70 font-normal">Share diet on profile</Label>
+              <Switch
+                checked={form.dietPublic}
+                onCheckedChange={(v) => update({ dietPublic: v })}
+                className="data-[state=checked]:bg-[#0F2240]"
+              />
+            </div>
+          </div>
+
           {/* Allergies */}
           <div className="space-y-2.5">
             <Label className="text-[#0F2240] font-medium text-sm">Allergies & sensitivities</Label>
@@ -542,6 +586,14 @@ export default function EditDogPage() {
               <Button type="button" variant="outline" onClick={addCustomAllergy} className="border-[#0F2240]/20 text-[#0F2240] hover:bg-[#EDE3D6] shrink-0">
                 Add
               </Button>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <Label className="text-sm text-[#0F2240]/70 font-normal">Share allergies on profile</Label>
+              <Switch
+                checked={form.allergiesPublic}
+                onCheckedChange={(v) => update({ allergiesPublic: v })}
+                className="data-[state=checked]:bg-[#0F2240]"
+              />
             </div>
           </div>
 
