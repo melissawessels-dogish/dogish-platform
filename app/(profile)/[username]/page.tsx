@@ -87,6 +87,17 @@ export default async function ProfilePage({
 
   const postList = (posts ?? []) as { id: string; images: string[] | null }[]
 
+  const { data: kitsRaw } = await admin
+    .from('kit')
+    .select('id, title, type, is_private')
+    .eq('owner_id', h.id)
+    .order('created_at', { ascending: false })
+
+  const kitList = ((kitsRaw ?? []) as { id: string; title: string; type: string | null; is_private: boolean }[])
+    .filter((k) => isOwnProfile || !k.is_private)
+
+  const showKitsSection = kitList.length > 0 || isOwnProfile
+
   const followerCount = h.follower_count ?? 0
 
   return (
@@ -223,7 +234,7 @@ export default async function ProfilePage({
         <div className="border-t border-[#0F2240]/8" />
 
         {/* Posts grid */}
-        <div className="mt-6 px-4 pb-24">
+        <div className={`mt-6 px-4 ${showKitsSection ? 'pb-4' : 'pb-24'}`}>
           <h2 className="text-[15px] font-semibold text-[#0F2240] mb-3">Posts</h2>
           {postList.length > 0 ? (
             <div className="grid grid-cols-3 gap-px">
@@ -249,6 +260,66 @@ export default async function ProfilePage({
             <p className="text-center text-[14px] text-[#0F2240]/40 py-10">No posts yet.</p>
           )}
         </div>
+
+        {/* Kits section */}
+        {showKitsSection && (
+          <>
+            <div className="border-t border-[#0F2240]/8" />
+            <div className="px-4 pt-5 pb-24">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[15px] font-semibold text-[#0F2240]">Kits</h2>
+                {isOwnProfile && kitList.length > 0 && (
+                  <Link
+                    href="/kits/new"
+                    className="text-[13px] font-semibold px-3 py-1 rounded-full text-white transition-colors"
+                    style={{ backgroundColor: '#0F2240' }}
+                  >
+                    + New kit
+                  </Link>
+                )}
+              </div>
+              {kitList.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {kitList.map((kit) => (
+                    <Link
+                      key={kit.id}
+                      href={`/${username}/kits/${kit.id}`}
+                      className="group rounded-xl overflow-hidden border border-[#0F2240]/10 hover:border-[#0F2240]/25 transition-colors"
+                    >
+                      <div
+                        className="w-full flex items-center justify-center"
+                        style={{ aspectRatio: '16/9', backgroundColor: '#0F2240' }}
+                      >
+                        <span className="text-white/20 text-2xl font-bold select-none">
+                          {kit.title[0]?.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="px-3 py-2.5 bg-white">
+                        <p className="text-sm font-semibold text-[#0F2240] truncate">{kit.title}</p>
+                        {kit.type && (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/60 capitalize">
+                            {kit.type}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-[14px] text-[#0F2240]/40 mb-3">No kits yet.</p>
+                  <Link
+                    href="/kits/new"
+                    className="text-sm font-medium px-4 py-1.5 rounded-full text-white"
+                    style={{ backgroundColor: '#0F2240' }}
+                  >
+                    Create your first kit
+                  </Link>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
       </div>
 

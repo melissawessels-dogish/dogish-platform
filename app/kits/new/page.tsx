@@ -97,17 +97,7 @@ export default function NewKitPage() {
   }, [dogId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTypeSelect = (type: KitTypeValue) => {
-    const next = selectedType === type ? null : type
-    setSelectedType(next)
-
-    if (!titleManuallyEdited) {
-      if (next) {
-        const typeLabel = KIT_TYPES.find((t) => t.value === next)!.label
-        setTitle(dogName ? `${dogName}'s ${typeLabel}` : typeLabel)
-      } else {
-        setTitle('')
-      }
-    }
+    setSelectedType(selectedType === type ? null : type)
   }
 
   const toggleDog = (id: string) => {
@@ -129,26 +119,39 @@ export default function NewKitPage() {
         .from('kit')
         .insert({
           owner_id: user.id,
-          name: title.trim(),
-          category: selectedType ?? null,
+          title: title.trim(),
+          type: selectedType ?? null,
           description: description.trim() || null,
-          is_public: !isPrivate,
+          is_private: isPrivate,
         })
         .select('id')
         .single()
 
-      if (insertError) throw insertError
+      if (insertError) {
+        console.error('[kit insert error]', insertError)
+        throw insertError
+      }
 
       if (taggedDogs.length > 0) {
         const { error: kitDogsError } = await supabase
           .from('kit_dogs')
           .insert(taggedDogs.map((id) => ({ kit_id: newKit.id, dog_id: id })))
-        if (kitDogsError) throw kitDogsError
+        if (kitDogsError) {
+          console.error('[kit_dogs insert error]', kitDogsError)
+          throw kitDogsError
+        }
       }
 
       router.push(cancelHref)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      console.error('[handleSubmit caught]', err)
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof (err as { message?: string }).message === 'string'
+          ? (err as { message: string }).message
+          : JSON.stringify(err)
+      setError(msg)
       setSubmitting(false)
     }
   }
@@ -213,23 +216,6 @@ export default function NewKitPage() {
             />
           </div>
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <Label htmlFor="description" className="text-[#0F2240] font-medium text-sm">Description</Label>
-            <div className="relative">
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder={getDescriptionPlaceholder(selectedType, dogName)}
-                rows={3}
-                maxLength={300}
-                className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] text-[#0F2240] resize-none pb-5"
-              />
-              <p className="absolute bottom-2 right-3 text-xs text-[#0F2240]/40 pointer-events-none">{description.length}/300</p>
-            </div>
-          </div>
-
           {/* Tag dogs */}
           {userDogs.length > 0 && (
             <div className="space-y-2">
@@ -259,6 +245,23 @@ export default function NewKitPage() {
               </div>
             </div>
           )}
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <Label htmlFor="description" className="text-[#0F2240] font-medium text-sm">Description <span className="text-[#0F2240]/40 font-normal">(optional)</span></Label>
+            <div className="relative">
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={getDescriptionPlaceholder(selectedType, dogName)}
+                rows={3}
+                maxLength={300}
+                className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] text-[#0F2240] resize-none pb-5"
+              />
+              <p className="absolute bottom-2 right-3 text-xs text-[#0F2240]/40 pointer-events-none">{description.length}/300</p>
+            </div>
+          </div>
 
           {/* Privacy */}
           <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#F7F3EE] border border-[#0F2240]/10">
