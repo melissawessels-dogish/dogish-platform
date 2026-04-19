@@ -14,7 +14,7 @@ export default async function EditProfilePage() {
   const admin = createAdminClient()
   const { data: human, error: humanError } = await admin
     .from('human')
-    .select('id, display_name, username, bio, location, avatar')
+    .select('id, display_name, username, bio, location, avatar, is_first_time_owner')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -34,6 +34,7 @@ export default async function EditProfilePage() {
     website: '',
     avatar: human.avatar ?? null,
     cover_photo: null,
+    is_first_time_owner: (human as { is_first_time_owner?: boolean | null }).is_first_time_owner ?? null,
   }
 
   return (

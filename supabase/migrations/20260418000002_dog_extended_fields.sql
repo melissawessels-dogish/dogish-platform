@@ -1,0 +1,9 @@
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS weight_lbs numeric(5,1);
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS is_fixed boolean;
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS energy_level text;
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS activities text[];
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS good_with text[];
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS health_conditions text[];
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS vet_name text;
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS insurance_provider text;
+ALTER TABLE dog ADD COLUMN IF NOT EXISTS has_insurance boolean;

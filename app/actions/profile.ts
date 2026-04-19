@@ -13,6 +13,7 @@ type UpdateProfileInput = {
   website: string
   avatar: string | null
   cover_photo: string | null
+  is_first_time_owner: boolean | null
 }
 
 export async function updateProfile(input: UpdateProfileInput) {
@@ -48,6 +49,7 @@ export async function updateProfile(input: UpdateProfileInput) {
     bio: bio || null,
     location: location || null,
     avatar: input.avatar,
+    is_first_time_owner: input.is_first_time_owner ?? null,
   }
   if (input.cover_photo !== undefined) {
     updatePayload.cover_photo = input.cover_photo

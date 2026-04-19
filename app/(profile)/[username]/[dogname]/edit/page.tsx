@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
 
 type DogSize = 'xs' | 'small' | 'medium' | 'large' | 'xl'
 type DogSex = 'male' | 'female' | 'unknown'
@@ -34,8 +33,15 @@ interface FormData {
   allergyInput: string
   diet: string[]
   isPrivate: boolean
-  allergiesPublic: boolean
-  dietPublic: boolean
+  isFixed: 'fixed' | 'intact' | null
+  energyLevel: string
+  activities: string[]
+  healthConditions: string[]
+  vetName: string
+  hasInsurance: boolean
+  insuranceProvider: string
+  location: string
+  foodBrand: string
 }
 
 const PERSONALITY_TAGS = [
@@ -47,7 +53,7 @@ const PERSONALITY_TAGS = [
 ]
 
 const COMMON_ALLERGIES = [
-  'none', 'chicken', 'beef', 'wheat', 'corn', 'soy',
+  'chicken', 'beef', 'wheat', 'corn', 'soy',
   'dairy', 'eggs', 'fish', 'lamb', 'pork',
 ]
 
@@ -59,6 +65,19 @@ const DIET_OPTIONS = [
   'raw',
   'home-cooked',
   'mixed/combination',
+]
+
+const ENERGY_LEVELS = ['low', 'moderate', 'high', 'very high']
+
+const ACTIVITY_OPTIONS = [
+  'hiking', 'swimming', 'fetch', 'agility', 'running',
+  'dog parks', 'cuddling', 'training',
+]
+
+const HEALTH_CONDITION_OPTIONS = [
+  'anxiety', 'arthritis', 'cancer', 'diabetes',
+  'epilepsy', 'heart disease', 'hip dysplasia', 'hypothyroidism',
+  'IBD', 'kidney disease', 'luxating patella',
 ]
 
 const SIZE_OPTIONS: { value: DogSize; label: string; range: string }[] = [
@@ -235,7 +254,7 @@ function TagSelector({
           onClick={() => onToggle(tag)}
           className={`px-3 py-1.5 rounded-full text-sm transition-colors ${selectedSet.has(tag) ? colorClass : emptyClass}`}
         >
-          {tag.toLowerCase() === 'none' ? 'No known allergies' : tag}
+          {tag}
         </button>
       ))}
     </div>
@@ -268,12 +287,20 @@ export default function EditDogPage() {
     allergyInput: '',
     diet: [],
     isPrivate: false,
-    allergiesPublic: true,
-    dietPublic: true,
+    isFixed: null,
+    energyLevel: '',
+    activities: [],
+    healthConditions: [],
+    vetName: '',
+    hasInsurance: false,
+    insuranceProvider: '',
+    location: '',
+    foodBrand: '',
   })
 
   useEffect(() => {
     async function load() {
+      try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
 
@@ -286,19 +313,25 @@ export default function EditDogPage() {
       if (!owner) { router.replace('/'); return }
 
       // Find dog
-      const { data: dogRows } = await supabase
+      const { data: dogRows, error: dogFetchError } = await supabase
         .from('dog')
-        .select(`id, name, avatar, bio, size, sex, birthday, personality_tags, allergies, diet, mix_description, is_private, allergies_public, diet_public, owner_id,
+        .select(`id, name, avatar, bio, size, sex, birthday, personality_tags, allergies, diet, mix_description, is_private, weight_lbs, is_fixed, energy_level, activities, good_with, health_conditions, vet_name, has_insurance, insurance_provider, location, food_brand, owner_id,
           dog_breeds(is_primary, breed:breed_id(id, name))`)
         .eq('owner_id', owner.id)
         .ilike('name', dogname)
         .limit(1)
 
+      if (dogFetchError) throw new Error(dogFetchError.message)
+
       const dog = dogRows?.[0] as {
         id: string; name: string; avatar: string | null; bio: string | null
         size: string | null; sex: string; birthday: string | null
         personality_tags: string[] | null; allergies: string[] | null; diet: string[] | null
-        mix_description: string | null; is_private: boolean; allergies_public: boolean; diet_public: boolean; owner_id: string
+        mix_description: string | null; is_private: boolean
+        weight_lbs: number | null; is_fixed: boolean | null; energy_level: string | null
+        activities: string[] | null; good_with: string[] | null; health_conditions: string[] | null
+        vet_name: string | null; has_insurance: boolean | null; insurance_provider: string | null
+        location: string | null; food_brand: string | null; owner_id: string
         dog_breeds: { is_primary: boolean; breed: { id: string; name: string } | null }[]
       } | undefined
 
@@ -306,6 +339,9 @@ export default function EditDogPage() {
 
       // Only owner can edit
       if (dog.owner_id !== user.id) { router.replace(`/${username}/${dogname}`); return }
+
+      const { data: humanData } = await supabase.from('human').select('location').eq('id', user.id).maybeSingle()
+      const humanLocation = humanData?.location ?? ''
 
       const existingBreeds = (dog.dog_breeds ?? [])
         .filter((b) => b.breed !== null)
@@ -328,10 +364,21 @@ export default function EditDogPage() {
         allergyInput: '',
         diet: dog.diet ?? [],
         isPrivate: dog.is_private,
-        allergiesPublic: dog.allergies_public,
-        dietPublic: dog.diet_public,
+        isFixed: dog.is_fixed === true ? 'fixed' : dog.is_fixed === false ? 'intact' : null,
+        energyLevel: dog.energy_level ?? '',
+        activities: dog.activities ?? [],
+        healthConditions: dog.health_conditions ?? [],
+        vetName: dog.vet_name ?? '',
+        hasInsurance: dog.has_insurance ?? false,
+        insuranceProvider: dog.insurance_provider ?? '',
+        location: dog.location ?? humanLocation,
+        foodBrand: dog.food_brand ?? '',
       })
       setLoaded(true)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load dog profile')
+        setLoaded(true)
+      }
     }
     load()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -341,17 +388,17 @@ export default function EditDogPage() {
   const togglePersonalityTag = (tag: string) =>
     update({ personalityTags: form.personalityTags.includes(tag) ? form.personalityTags.filter((t) => t !== tag) : [...form.personalityTags, tag] })
 
-  const toggleAllergy = (tag: string) => {
-    if (tag === 'none') {
-      update({ allergies: form.allergies.includes('none') ? [] : ['none'] })
-    } else {
-      const without = form.allergies.filter((t) => t !== 'none')
-      update({ allergies: without.includes(tag) ? without.filter((t) => t !== tag) : [...without, tag] })
-    }
-  }
+  const toggleAllergy = (tag: string) =>
+    update({ allergies: form.allergies.includes(tag) ? form.allergies.filter((t) => t !== tag) : [...form.allergies, tag] })
 
   const toggleDiet = (tag: string) =>
     update({ diet: form.diet.includes(tag) ? form.diet.filter((t) => t !== tag) : [...form.diet, tag] })
+
+  const toggleActivity = (tag: string) =>
+    update({ activities: form.activities.includes(tag) ? form.activities.filter((t) => t !== tag) : [...form.activities, tag] })
+
+  const toggleHealthCondition = (tag: string) =>
+    update({ healthConditions: form.healthConditions.includes(tag) ? form.healthConditions.filter((t) => t !== tag) : [...form.healthConditions, tag] })
 
   const addCustomAllergy = () => {
     const val = form.allergyInput.trim().toLowerCase()
@@ -399,8 +446,15 @@ export default function EditDogPage() {
         diet: form.diet.length > 0 ? form.diet : null,
         mix_description: form.mixDescription.trim() || null,
         is_private: form.isPrivate,
-        allergies_public: form.allergiesPublic,
-        diet_public: form.dietPublic,
+        is_fixed: form.isFixed === 'fixed' ? true : form.isFixed === 'intact' ? false : null,
+        energy_level: form.energyLevel || null,
+        activities: form.activities.length > 0 ? form.activities : null,
+        health_conditions: form.healthConditions.length > 0 ? form.healthConditions : null,
+        vet_name: form.vetName.trim() || null,
+        has_insurance: form.hasInsurance,
+        insurance_provider: form.hasInsurance && form.insuranceProvider.trim() ? form.insuranceProvider.trim() : null,
+        location: form.location.trim() || null,
+        food_brand: form.foodBrand.trim() || null,
       }).eq('id', dogId)
       if (dogError) throw dogError
 
@@ -428,6 +482,28 @@ export default function EditDogPage() {
     )
   }
 
+  if (error && !dogId) {
+    return (
+      <div className="min-h-svh bg-white">
+        <div className="max-w-lg mx-auto px-4 pt-6">
+          <Link
+            href={`/${username}/${dogname}`}
+            className="inline-flex items-center gap-1.5 text-[13px] text-[#0F2240]/50 hover:text-[#0F2240] transition-colors mb-6"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+            Back to {form.name || (dogname.charAt(0).toUpperCase() + dogname.slice(1))}&apos;s profile
+          </Link>
+          <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <p className="font-medium mb-1">Failed to load dog profile</p>
+            <p className="font-mono text-xs">{error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-svh bg-white pb-24">
       <div className="max-w-lg mx-auto px-4 pt-6">
@@ -440,7 +516,7 @@ export default function EditDogPage() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M19 12H5M12 5l-7 7 7 7" />
           </svg>
-          Back to {form.name}
+          Back to {form.name || (dogname.charAt(0).toUpperCase() + dogname.slice(1))}&apos;s profile
         </Link>
 
         <h1 className="text-2xl font-bold text-[#0F2240] mb-6">Edit {form.name}</h1>
@@ -464,6 +540,22 @@ export default function EditDogPage() {
               onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
               className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
             />
+          </div>
+
+          {/* Bio */}
+          <div className="space-y-1.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Bio</Label>
+            <div className="relative">
+              <Textarea
+                placeholder={`Tell the community about ${form.name || 'your dog'}…`}
+                value={form.bio}
+                onChange={(e) => update({ bio: e.target.value })}
+                rows={3}
+                maxLength={300}
+                className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white resize-none text-[#0F2240] pb-5"
+              />
+              <p className="absolute bottom-2 right-3 text-xs text-[#0F2240]/40 pointer-events-none">{form.bio.length}/300</p>
+            </div>
           </div>
 
           {/* Breed */}
@@ -492,6 +584,18 @@ export default function EditDogPage() {
               value={form.birthday}
               onChange={(e) => update({ birthday: e.target.value })}
               max={new Date().toISOString().split('T')[0]}
+              className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+            />
+          </div>
+
+          {/* Location */}
+          <div className="space-y-1.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Location</Label>
+            <Input
+              placeholder="City, State"
+              value={form.location}
+              onChange={(e) => update({ location: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
               className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
             />
           </div>
@@ -541,28 +645,58 @@ export default function EditDogPage() {
             </div>
           </div>
 
+          {/* Spayed / Neutered */}
+          <div className="space-y-1.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Spayed / Neutered</Label>
+            <div className="flex gap-2">
+              {(['fixed', 'intact'] as const).map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => update({ isFixed: form.isFixed === val ? null : val })}
+                  className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                    form.isFixed === val
+                      ? 'border-[#0F2240] bg-[#0F2240] text-white'
+                      : 'border-[#0F2240]/20 bg-white text-[#0F2240] hover:border-[#0F2240]/50'
+                  }`}
+                >
+                  {val === 'fixed' ? 'Spayed / Neutered' : 'Intact'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Personality */}
           <div className="space-y-2.5">
             <Label className="text-[#0F2240] font-medium text-sm">Personality</Label>
             <TagSelector tags={PERSONALITY_TAGS} selected={form.personalityTags} onToggle={togglePersonalityTag} />
           </div>
 
-          {/* Diet */}
+          {/* Energy level */}
           <div className="space-y-2.5">
-            <Label className="text-[#0F2240] font-medium text-sm">Diet</Label>
-            <TagSelector
-              tags={DIET_OPTIONS}
-              selected={form.diet}
-              onToggle={toggleDiet}
-            />
-            <div className="flex items-center justify-between pt-1">
-              <Label className="text-sm text-[#0F2240]/70 font-normal">Share diet on profile</Label>
-              <Switch
-                checked={form.dietPublic}
-                onCheckedChange={(v) => update({ dietPublic: v })}
-                className="data-[state=checked]:bg-[#0F2240]"
-              />
+            <Label className="text-[#0F2240] font-medium text-sm">Energy level</Label>
+            <div className="flex flex-wrap gap-2">
+              {ENERGY_LEVELS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => update({ energyLevel: form.energyLevel === level ? '' : level })}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    form.energyLevel === level
+                      ? 'bg-[#0F2240] text-white'
+                      : 'bg-[#F7F3EE] text-[#0F2240] hover:bg-[#EDE3D6]'
+                  }`}
+                >
+                  {level}
+                </button>
+              ))}
             </div>
+          </div>
+
+          {/* Activities */}
+          <div className="space-y-2.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Activities</Label>
+            <TagSelector tags={ACTIVITY_OPTIONS} selected={form.activities} onToggle={toggleActivity} />
           </div>
 
           {/* Allergies */}
@@ -587,28 +721,66 @@ export default function EditDogPage() {
                 Add
               </Button>
             </div>
-            <div className="flex items-center justify-between pt-1">
-              <Label className="text-sm text-[#0F2240]/70 font-normal">Share allergies on profile</Label>
-              <Switch
-                checked={form.allergiesPublic}
-                onCheckedChange={(v) => update({ allergiesPublic: v })}
-                className="data-[state=checked]:bg-[#0F2240]"
-              />
-            </div>
           </div>
 
-          {/* Bio */}
-          <div className="space-y-1.5">
-            <Label className="text-[#0F2240] font-medium text-sm">Bio</Label>
-            <Textarea
-              placeholder={`Tell the community about ${form.name || 'your dog'}…`}
-              value={form.bio}
-              onChange={(e) => update({ bio: e.target.value })}
-              rows={3}
-              maxLength={300}
-              className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white resize-none text-[#0F2240]"
+          {/* Health conditions */}
+          <div className="space-y-2.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Health conditions</Label>
+            <TagSelector tags={HEALTH_CONDITION_OPTIONS} selected={form.healthConditions} onToggle={toggleHealthCondition} />
+          </div>
+
+          {/* Diet */}
+          <div className="space-y-2.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Diet</Label>
+            <TagSelector
+              tags={DIET_OPTIONS}
+              selected={form.diet}
+              onToggle={toggleDiet}
             />
-            <p className="text-xs text-[#0F2240]/40 text-right">{form.bio.length}/300</p>
+          </div>
+
+          {/* Food brand */}
+          <div className="space-y-1.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Food brand</Label>
+            <Input
+              value={form.foodBrand}
+              onChange={(e) => update({ foodBrand: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+              className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+            />
+          </div>
+
+          {/* Vet */}
+          <div className="space-y-1.5">
+            <Label className="text-[#0F2240] font-medium text-sm">Vet / practice name</Label>
+            <Input
+              value={form.vetName}
+              onChange={(e) => update({ vetName: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+              className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+            />
+          </div>
+
+          {/* Insurance */}
+          <div className="space-y-2.5">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.hasInsurance}
+                onChange={(e) => update({ hasInsurance: e.target.checked })}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#0F2240]/30 accent-[#0F2240] cursor-pointer"
+              />
+              <p className="text-sm font-medium text-[#0F2240]">Has pet insurance</p>
+            </label>
+            {form.hasInsurance && (
+              <Input
+                placeholder="Insurance provider"
+                value={form.insuranceProvider}
+                onChange={(e) => update({ insuranceProvider: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
+                className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+              />
+            )}
           </div>
 
           {/* Private */}

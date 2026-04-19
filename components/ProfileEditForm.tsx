@@ -28,6 +28,7 @@ type Props = {
     website: string
     avatar: string | null
     cover_photo: string | null
+    is_first_time_owner: boolean | null
   }
   dogs: Dog[]
 }
@@ -48,6 +49,7 @@ export default function ProfileEditForm({ userId, initial, dogs }: Props) {
   const coverInputRef = useRef<HTMLInputElement>(null)
   const [coverPhoto, setCoverPhoto] = useState<string | null>(initial.cover_photo)
   const [coverUploading, setCoverUploading] = useState(false)
+  const [isFirstTimeOwner, setIsFirstTimeOwner] = useState<boolean | null>(initial.is_first_time_owner)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
@@ -128,6 +130,7 @@ export default function ProfileEditForm({ userId, initial, dogs }: Props) {
       website,
       avatar,
       cover_photo: coverPhoto,
+      is_first_time_owner: isFirstTimeOwner,
     })
 
     if (result?.error) {
@@ -294,6 +297,27 @@ export default function ProfileEditForm({ userId, initial, dogs }: Props) {
           type="url"
           className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] text-[#0F2240]"
         />
+      </div>
+
+      {/* Dog owner experience */}
+      <div className="space-y-1.5">
+        <Label className="text-[#0F2240] font-medium text-sm">Dog owner experience</Label>
+        <div className="flex gap-2">
+          {([['First-time owner', true], ['Experienced owner', false]] as [string, boolean][]).map(([label, value]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setIsFirstTimeOwner(isFirstTimeOwner === value ? null : value)}
+              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                isFirstTimeOwner === value
+                  ? 'border-[#0F2240] bg-[#0F2240] text-white'
+                  : 'border-[#0F2240]/20 bg-white text-[#0F2240] hover:border-[#0F2240]/50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Error */}
