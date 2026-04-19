@@ -12,9 +12,10 @@ import { Switch } from '@/components/ui/switch'
 
 const KIT_TYPES = [
   { value: 'gear', label: 'Gear' },
-  { value: 'places', label: 'Places' },
   { value: 'food', label: 'Food & Treats' },
   { value: 'health', label: 'Health & Care' },
+  { value: 'services', label: 'Services' },
+  { value: 'places', label: 'Places' },
   { value: 'wishlist', label: 'Wish List' },
   { value: 'favorites', label: 'Favorites' },
 ] as const
@@ -31,9 +32,10 @@ function getDescriptionPlaceholder(type: KitTypeValue | null, name: string | nul
   const n = name ?? 'your dog'
   switch (type) {
     case 'gear':      return `e.g. ${n}'s harness, leash, favorite toys, bed`
-    case 'places':    return `e.g. Our favorite parks, trails, and dog-friendly spots`
     case 'food':      return `e.g. The kibble ${n} eats, favorite treats, supplements`
     case 'health':    return `e.g. ${n}'s vet, medications, supplements, groomer`
+    case 'services':  return `e.g. Groomers, trainers, vets, boarding`
+    case 'places':    return `e.g. Our favorite parks, trails, and dog-friendly spots`
     case 'wishlist':  return `e.g. Things we want to try`
     case 'favorites': return `e.g. Anything and everything ${n} loves`
     default:          return "What's this kit about?"

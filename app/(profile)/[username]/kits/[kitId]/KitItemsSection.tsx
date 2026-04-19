@@ -46,7 +46,17 @@ type Props = {
 
 const PLACE_CATEGORIES = ['Park', 'Trail', 'Restaurant', 'Vet', 'Groomer', 'Hotel', 'Other']
 
-export default function KitItemsSection({ kitId, isOwner, initialItems, userId }: Props) {
+const PLACE_FIRST_TYPES = ['services', 'places']
+const PRODUCT_FIRST_TYPES = ['gear', 'food & treats', 'health & care', 'wish list', 'favorites']
+
+function addButtonLabel(kitType: string | null): string {
+  const t = kitType?.toLowerCase() ?? ''
+  if (PLACE_FIRST_TYPES.includes(t)) return '+ Add a place'
+  if (PRODUCT_FIRST_TYPES.includes(t)) return '+ Add a product'
+  return '+ Add an item'
+}
+
+export default function KitItemsSection({ kitId, isOwner, initialItems, kitType, userId }: Props) {
   const supabase = createClient()
   const [items, setItems] = useState<KitItem[]>(initialItems)
   const [showAddPanel, setShowAddPanel] = useState(false)
@@ -296,7 +306,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, userId }
             onClick={() => { setShowAddPanel((v) => !v); if (showAddPanel) closePanel() }}
             className="text-sm font-medium px-4 py-1.5 rounded-full border border-[#0F2240]/20 text-[#0F2240] hover:bg-[#F7F3EE] transition-colors"
           >
-            {showAddPanel ? 'Cancel' : '+ Add item'}
+            {showAddPanel ? 'Cancel' : addButtonLabel(kitType)}
           </button>
         )}
       </div>
@@ -304,208 +314,227 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, userId }
       {/* Add panel */}
       {showAddPanel && isOwner && (
         <div className="mb-5 rounded-xl border border-[#0F2240]/10 overflow-hidden bg-[#F7F3EE]">
-          <div className="p-4 space-y-0">
+          {(() => {
+            const isPlaceFirst = PLACE_FIRST_TYPES.includes(kitType?.toLowerCase() ?? '')
 
-            {/* SECTION 1: Add a product */}
-            <div className="pb-5">
-              <p className="text-sm font-semibold text-[#0F2240] mb-0.5">Add a product</p>
-              <p className="text-xs text-[#0F2240]/45 mb-3">Search for a product to add to this kit</p>
+            const productSection = (padClass: string) => (
+              <div className={padClass}>
+                <p className="text-sm font-semibold text-[#0F2240] mb-0.5">Add a product</p>
+                <p className="text-xs text-[#0F2240]/45 mb-3">Search for a product to add to this kit</p>
 
-              {!showNewProductForm ? (
-                <>
-                  <Input
-                    placeholder="Search products…"
-                    value={productQuery}
-                    onChange={(e) => setProductQuery(e.target.value)}
-                    className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240] mb-2"
-                  />
-                  {productQuery.length < 2 ? null : searchingProducts ? (
-                    <p className="text-xs text-[#0F2240]/40 py-1">Searching…</p>
-                  ) : productResults.length > 0 ? (
-                    <div className="flex flex-col gap-1.5">
-                      {productResults.map((product) => {
-                        const alreadyAdded = items.some((i) => i.product_id === product.id)
-                        return (
-                          <button
-                            key={product.id}
-                            type="button"
-                            disabled={alreadyAdded || addingProduct}
-                            onClick={() => addExistingProduct(product)}
-                            className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-[#0F2240]/10 hover:border-[#0F2240]/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-[#0F2240] truncate">{product.name}</p>
-                              {(product.brand || product.category) && (
-                                <p className="text-xs text-[#0F2240]/50 truncate">
-                                  {[product.brand, product.category].filter(Boolean).join(' · ')}
-                                </p>
-                              )}
-                            </div>
-                            <span className="text-xs text-[#0F2240]/40 shrink-0">
-                              {alreadyAdded ? 'Added' : '+ Add'}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  ) : productSearchDone ? (
-                    <div>
-                      <p className="text-xs text-[#0F2240]/30 py-1">No products found.</p>
-                      <button
-                        type="button"
-                        onClick={() => { setShowNewProductForm(true); setProductAdded(false) }}
-                        className="text-xs font-medium text-[#0F2240]/60 hover:text-[#0F2240] underline underline-offset-2 transition-colors"
-                      >
-                        Don&apos;t see it? Add it to the catalog
-                      </button>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
+                {!showNewProductForm ? (
+                  <>
+                    <Input
+                      placeholder="Search products…"
+                      value={productQuery}
+                      onChange={(e) => setProductQuery(e.target.value)}
+                      className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240] mb-2"
+                    />
+                    {productQuery.length < 2 ? null : searchingProducts ? (
+                      <p className="text-xs text-[#0F2240]/40 py-1">Searching…</p>
+                    ) : productResults.length > 0 ? (
+                      <div className="flex flex-col gap-1.5">
+                        {productResults.map((product) => {
+                          const alreadyAdded = items.some((i) => i.product_id === product.id)
+                          return (
+                            <button
+                              key={product.id}
+                              type="button"
+                              disabled={alreadyAdded || addingProduct}
+                              onClick={() => addExistingProduct(product)}
+                              className="flex items-center gap-3 p-2.5 rounded-lg bg-white border border-[#0F2240]/10 hover:border-[#0F2240]/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[#0F2240] truncate">{product.name}</p>
+                                {(product.brand || product.category) && (
+                                  <p className="text-xs text-[#0F2240]/50 truncate">
+                                    {[product.brand, product.category].filter(Boolean).join(' · ')}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="text-xs text-[#0F2240]/40 shrink-0">
+                                {alreadyAdded ? 'Added' : '+ Add'}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : productSearchDone ? (
+                      <div>
+                        <p className="text-xs text-[#0F2240]/30 py-1">No products found.</p>
+                        <button
+                          type="button"
+                          onClick={() => { setShowNewProductForm(true); setProductAdded(false) }}
+                          className="text-xs font-medium text-[#0F2240]/60 hover:text-[#0F2240] underline underline-offset-2 transition-colors"
+                        >
+                          Don&apos;t see it? Add it to the catalog
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => { setShowNewProductForm(false); setProductAdded(false); setProductError(null) }}
+                      className="text-xs text-[#0F2240]/50 hover:text-[#0F2240] transition-colors"
+                    >
+                      ← Back to search
+                    </button>
+                    <Input
+                      placeholder="Product name *"
+                      value={newProductName}
+                      onChange={(e) => setNewProductName(e.target.value)}
+                      className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+                    />
+                    <Input
+                      placeholder="Brand *"
+                      value={newProductBrand}
+                      onChange={(e) => setNewProductBrand(e.target.value)}
+                      className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+                    />
+                    <button
+                      type="button"
+                      disabled={!newProductName.trim() || !newProductBrand.trim() || addingProduct}
+                      onClick={addNewProduct}
+                      className="w-full py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40 transition-opacity"
+                      style={{ backgroundColor: '#0F2240' }}
+                    >
+                      {addingProduct ? 'Adding…' : 'Add to kit and Dogish catalog'}
+                    </button>
+                    {productAdded && (
+                      <p className="text-xs text-[#0F2240]/40 text-center">Added to your kit and the Dogish product catalog</p>
+                    )}
+                  </div>
+                )}
+
+                {productError && <p className="text-xs text-red-600 mt-2">{productError}</p>}
+              </div>
+            )
+
+            const placeSection = (padClass: string) => (
+              <div className={padClass}>
+                <p className="text-sm font-semibold text-[#0F2240] mb-0.5">Add a place</p>
+                <p className="text-xs text-[#0F2240]/45 mb-3">Add a location you recommend</p>
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => { setShowNewProductForm(false); setProductAdded(false); setProductError(null) }}
-                    className="text-xs text-[#0F2240]/50 hover:text-[#0F2240] transition-colors"
+                  <Input
+                    placeholder="Place name *"
+                    value={placeName}
+                    onChange={(e) => setPlaceName(e.target.value)}
+                    className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+                  />
+                  <Input
+                    placeholder="Address (optional)"
+                    value={placeAddress}
+                    onChange={(e) => setPlaceAddress(e.target.value)}
+                    className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="City *"
+                      value={placeCity}
+                      onChange={(e) => setPlaceCity(e.target.value)}
+                      className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
+                    />
+                    <Input
+                      placeholder="State *"
+                      value={placeState}
+                      onChange={(e) => setPlaceState(e.target.value)}
+                      className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240] w-24 shrink-0"
+                    />
+                  </div>
+                  <select
+                    value={placeCategory}
+                    onChange={(e) => setPlaceCategory(e.target.value)}
+                    className="w-full h-9 rounded-md border border-[#0F2240]/20 bg-white px-3 text-sm text-[#0F2240] focus:outline-none focus:ring-2 focus:ring-[#0F2240]"
                   >
-                    ← Back to search
-                  </button>
-                  <Input
-                    placeholder="Product name *"
-                    value={newProductName}
-                    onChange={(e) => setNewProductName(e.target.value)}
-                    className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
-                  />
-                  <Input
-                    placeholder="Brand *"
-                    value={newProductBrand}
-                    onChange={(e) => setNewProductBrand(e.target.value)}
-                    className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
-                  />
+                    <option value="">Category (optional)</option>
+                    {PLACE_CATEGORIES.map((c) => (
+                      <option key={c} value={c.toLowerCase()}>{c}</option>
+                    ))}
+                  </select>
+                  {placeError && <p className="text-xs text-red-600">{placeError}</p>}
                   <button
                     type="button"
-                    disabled={!newProductName.trim() || !newProductBrand.trim() || addingProduct}
-                    onClick={addNewProduct}
+                    disabled={!placeName.trim() || !placeCity.trim() || !placeState.trim() || addingPlace}
+                    onClick={addPlace}
                     className="w-full py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40 transition-opacity"
                     style={{ backgroundColor: '#0F2240' }}
                   >
-                    {addingProduct ? 'Adding…' : 'Add to kit and Dogish catalog'}
+                    {addingPlace ? 'Adding…' : 'Add place'}
                   </button>
-                  {productAdded && (
-                    <p className="text-xs text-[#0F2240]/40 text-center">Added to your kit and the Dogish product catalog</p>
-                  )}
                 </div>
-              )}
-
-              {productError && <p className="text-xs text-red-600 mt-2">{productError}</p>}
-            </div>
-
-            <div className="border-t border-[#0F2240]/10" />
-
-            {/* SECTION 2: Add a place */}
-            <div className="py-5">
-              <p className="text-sm font-semibold text-[#0F2240] mb-0.5">Add a place</p>
-              <p className="text-xs text-[#0F2240]/45 mb-3">Add a location you recommend</p>
-              <div className="space-y-2">
-                <Input
-                  placeholder="Place name *"
-                  value={placeName}
-                  onChange={(e) => setPlaceName(e.target.value)}
-                  className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
-                />
-                <Input
-                  placeholder="Address (optional)"
-                  value={placeAddress}
-                  onChange={(e) => setPlaceAddress(e.target.value)}
-                  className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
-                />
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="City *"
-                    value={placeCity}
-                    onChange={(e) => setPlaceCity(e.target.value)}
-                    className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240]"
-                  />
-                  <Input
-                    placeholder="State *"
-                    value={placeState}
-                    onChange={(e) => setPlaceState(e.target.value)}
-                    className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240] w-24 shrink-0"
-                  />
-                </div>
-                <select
-                  value={placeCategory}
-                  onChange={(e) => setPlaceCategory(e.target.value)}
-                  className="w-full h-9 rounded-md border border-[#0F2240]/20 bg-white px-3 text-sm text-[#0F2240] focus:outline-none focus:ring-2 focus:ring-[#0F2240]"
-                >
-                  <option value="">Category (optional)</option>
-                  {PLACE_CATEGORIES.map((c) => (
-                    <option key={c} value={c.toLowerCase()}>{c}</option>
-                  ))}
-                </select>
-                {placeError && <p className="text-xs text-red-600">{placeError}</p>}
-                <button
-                  type="button"
-                  disabled={!placeName.trim() || !placeCity.trim() || !placeState.trim() || addingPlace}
-                  onClick={addPlace}
-                  className="w-full py-2 rounded-lg text-sm font-medium text-white disabled:opacity-40 transition-opacity"
-                  style={{ backgroundColor: '#0F2240' }}
-                >
-                  {addingPlace ? 'Adding…' : 'Add place'}
-                </button>
               </div>
-            </div>
+            )
 
-            <div className="border-t border-[#0F2240]/10" />
-
-            {/* SECTION 3: From your posts */}
-            <div className="pt-5">
-              <p className="text-sm font-semibold text-[#0F2240] mb-0.5">From your posts</p>
-              <p className="text-xs text-[#0F2240]/45 mb-3">Link a post you&apos;ve already shared</p>
-              <Input
-                placeholder="Search your posts…"
-                value={postQuery}
-                onChange={(e) => setPostQuery(e.target.value)}
-                className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240] mb-2"
-              />
-              {postQuery.length < 2 ? (
-                <p className="text-xs text-[#0F2240]/30 py-1">Type to search your posts…</p>
-              ) : searching ? (
-                <p className="text-xs text-[#0F2240]/40 py-1">Searching…</p>
-              ) : postResults.length === 0 ? (
-                <p className="text-xs text-[#0F2240]/30 py-1">No posts found.</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {postResults.map((post) => {
-                    const alreadyAdded = items.some((i) => i.post_id === post.id)
-                    return (
-                      <button
-                        key={post.id}
-                        type="button"
-                        disabled={alreadyAdded || addingPost}
-                        onClick={() => addPost(post)}
-                        className="flex items-center gap-3 p-2 rounded-lg bg-white border border-[#0F2240]/10 hover:border-[#0F2240]/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <div className="relative w-10 shrink-0 rounded-md overflow-hidden bg-[#EDE3D6]" style={{ aspectRatio: '4/5' }}>
-                          {post.images?.[0] && (
-                            <Image src={post.images[0]} alt="" fill className="object-cover" />
+            const postsSection = (
+              <div className="pt-5">
+                <p className="text-sm font-semibold text-[#0F2240] mb-0.5">From your posts</p>
+                <p className="text-xs text-[#0F2240]/45 mb-3">Link a post you&apos;ve already shared</p>
+                <Input
+                  placeholder="Search your posts…"
+                  value={postQuery}
+                  onChange={(e) => setPostQuery(e.target.value)}
+                  className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240] mb-2"
+                />
+                {postQuery.length < 2 ? (
+                  <p className="text-xs text-[#0F2240]/30 py-1">Type to search your posts…</p>
+                ) : searching ? (
+                  <p className="text-xs text-[#0F2240]/40 py-1">Searching…</p>
+                ) : postResults.length === 0 ? (
+                  <p className="text-xs text-[#0F2240]/30 py-1">No posts found.</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {postResults.map((post) => {
+                      const alreadyAdded = items.some((i) => i.post_id === post.id)
+                      return (
+                        <button
+                          key={post.id}
+                          type="button"
+                          disabled={alreadyAdded || addingPost}
+                          onClick={() => addPost(post)}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-white border border-[#0F2240]/10 hover:border-[#0F2240]/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <div className="relative w-10 shrink-0 rounded-md overflow-hidden bg-[#EDE3D6]" style={{ aspectRatio: '4/5' }}>
+                            {post.images?.[0] && (
+                              <Image src={post.images[0]} alt="" fill className="object-cover" />
+                            )}
+                          </div>
+                          <p className="text-sm text-[#0F2240] line-clamp-2 flex-1">
+                            {post.body || '(no caption)'}
+                          </p>
+                          {alreadyAdded && (
+                            <span className="text-xs text-[#0F2240]/40 shrink-0">Added</span>
                           )}
-                        </div>
-                        <p className="text-sm text-[#0F2240] line-clamp-2 flex-1">
-                          {post.body || '(no caption)'}
-                        </p>
-                        {alreadyAdded && (
-                          <span className="text-xs text-[#0F2240]/40 shrink-0">Added</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              {postError && <p className="text-xs text-red-600 mt-2">{postError}</p>}
-            </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                {postError && <p className="text-xs text-red-600 mt-2">{postError}</p>}
+              </div>
+            )
 
-          </div>
+            return (
+              <div className="p-4 space-y-0">
+                {isPlaceFirst ? (
+                  <>
+                    {placeSection('pb-5')}
+                    <div className="border-t border-[#0F2240]/10" />
+                    {productSection('py-5')}
+                  </>
+                ) : (
+                  <>
+                    {productSection('pb-5')}
+                    <div className="border-t border-[#0F2240]/10" />
+                    {placeSection('py-5')}
+                  </>
+                )}
+                <div className="border-t border-[#0F2240]/10" />
+                {postsSection}
+              </div>
+            )
+          })()}
         </div>
       )}
 
