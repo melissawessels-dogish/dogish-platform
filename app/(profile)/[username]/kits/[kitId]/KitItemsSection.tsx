@@ -82,10 +82,9 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
   const [addingPlace, setAddingPlace] = useState(false)
   const [placeError, setPlaceError] = useState<string | null>(null)
 
-  // Post search
-  const [postQuery, setPostQuery] = useState('')
+  // Post grid
   const [postResults, setPostResults] = useState<PostResult[]>([])
-  const [searching, setSearching] = useState(false)
+  const [loadingPosts, setLoadingPosts] = useState(false)
   const [addingPost, setAddingPost] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
 
@@ -108,24 +107,22 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
     return () => clearTimeout(timer)
   }, [productQuery, searchProducts])
 
-  const searchPosts = useCallback(async (q: string) => {
+  const fetchRecentPosts = useCallback(async () => {
     if (!userId) return
-    if (q.length < 2) { setPostResults([]); return }
-    setSearching(true)
+    setLoadingPosts(true)
     const { data } = await supabase
       .from('post')
       .select('id, body, images')
       .eq('author_id', userId)
-      .ilike('body', `%${q}%`)
-      .limit(6)
+      .order('created_at', { ascending: false })
+      .limit(12)
     setPostResults(data ?? [])
-    setSearching(false)
+    setLoadingPosts(false)
   }, [supabase, userId])
 
   useEffect(() => {
-    const timer = setTimeout(() => searchPosts(postQuery), 300)
-    return () => clearTimeout(timer)
-  }, [postQuery, searchPosts])
+    if (showAddPanel) fetchRecentPosts()
+  }, [showAddPanel, fetchRecentPosts])
 
   const nextPosition = items.length > 0 ? Math.max(...items.map((i) => i.position)) + 1 : 0
 
@@ -134,7 +131,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
     setProductQuery(''); setProductResults([]); setProductSearchDone(false)
     setShowNewProductForm(false); setNewProductName(''); setNewProductBrand(''); setProductAdded(false); setProductError(null)
     setPlaceName(''); setPlaceAddress(''); setPlaceCity(''); setPlaceState(''); setPlaceCategory(''); setPlaceError(null)
-    setPostQuery(''); setPostResults([]); setPostError(null)
+    setPostResults([]); setPostError(null)
   }
 
   const addExistingProduct = async (product: ProductResult) => {
@@ -469,22 +466,14 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
 
             const postsSection = (
               <div className="pt-5">
-                <p className="text-sm font-semibold text-[#0F2240] mb-0.5">From your posts</p>
-                <p className="text-xs text-[#0F2240]/45 mb-3">Link a post you&apos;ve already shared</p>
-                <Input
-                  placeholder="Search your posts…"
-                  value={postQuery}
-                  onChange={(e) => setPostQuery(e.target.value)}
-                  className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] bg-white text-[#0F2240] mb-2"
-                />
-                {postQuery.length < 2 ? (
-                  <p className="text-xs text-[#0F2240]/30 py-1">Type to search your posts…</p>
-                ) : searching ? (
-                  <p className="text-xs text-[#0F2240]/40 py-1">Searching…</p>
+                <p className="text-sm font-semibold text-[#0F2240] mb-0.5">Add a post</p>
+                <p className="text-xs text-[#0F2240]/45 mb-3">Select one of your posts to add to this kit</p>
+                {loadingPosts ? (
+                  <p className="text-xs text-[#0F2240]/40 py-1">Loading…</p>
                 ) : postResults.length === 0 ? (
-                  <p className="text-xs text-[#0F2240]/30 py-1">No posts found.</p>
+                  <p className="text-xs text-[#0F2240]/30 py-1">No posts yet.</p>
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {postResults.map((post) => {
                       const alreadyAdded = items.some((i) => i.post_id === post.id)
                       return (
@@ -493,18 +482,22 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
                           type="button"
                           disabled={alreadyAdded || addingPost}
                           onClick={() => addPost(post)}
-                          className="flex items-center gap-3 p-2 rounded-lg bg-white border border-[#0F2240]/10 hover:border-[#0F2240]/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="relative w-full overflow-hidden rounded-lg bg-[#EDE3D6] disabled:opacity-40 disabled:cursor-not-allowed ring-offset-1 hover:ring-2 hover:ring-[#0F2240]/40 transition-all"
+                          style={{ aspectRatio: '4/5' }}
                         >
-                          <div className="relative w-10 shrink-0 rounded-md overflow-hidden bg-[#EDE3D6]" style={{ aspectRatio: '4/5' }}>
-                            {post.images?.[0] && (
-                              <Image src={post.images[0]} alt="" fill className="object-cover" />
-                            )}
-                          </div>
-                          <p className="text-sm text-[#0F2240] line-clamp-2 flex-1">
-                            {post.body || '(no caption)'}
-                          </p>
+                          {post.images?.[0] ? (
+                            <Image src={post.images[0]} alt="" fill className="object-cover" />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center p-2">
+                              <p className="text-[10px] text-[#0F2240]/50 text-center line-clamp-4 leading-tight">
+                                {post.body || '(no caption)'}
+                              </p>
+                            </div>
+                          )}
                           {alreadyAdded && (
-                            <span className="text-xs text-[#0F2240]/40 shrink-0">Added</span>
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                              <span className="text-[10px] font-semibold text-white">Added</span>
+                            </div>
                           )}
                         </button>
                       )
@@ -565,7 +558,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
                 {/* Visual */}
                 {isPost ? (
                   <Link href={`/posts/${item.post_id}`} className="shrink-0">
-                    <div className="relative w-12 rounded-lg overflow-hidden bg-[#EDE3D6]" style={{ aspectRatio: '4/5' }}>
+                    <div className="relative w-10 rounded-lg overflow-hidden bg-[#EDE3D6]" style={{ aspectRatio: '4/5' }}>
                       {item.post?.images?.[0] && (
                         <Image src={item.post.images[0]} alt="" fill className="object-cover" />
                       )}
@@ -590,11 +583,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  {isPost ? (
-                    <Link href={`/posts/${item.post_id}`} className="block">
-                      <p className="text-sm text-[#0F2240] line-clamp-2 leading-snug">{displayName}</p>
-                    </Link>
-                  ) : (
+                  {isPost ? null : (
                     <>
                       <p className="text-sm font-medium text-[#0F2240] truncate">{displayName}</p>
                       {displaySub && (
