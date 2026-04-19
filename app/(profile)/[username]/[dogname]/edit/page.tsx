@@ -71,7 +71,7 @@ const ENERGY_LEVELS = ['low', 'moderate', 'high', 'very high']
 
 const ACTIVITY_OPTIONS = [
   'hiking', 'swimming', 'fetch', 'agility', 'running',
-  'dog parks', 'cuddling', 'training',
+  'walking', 'dog parks', 'cuddling', 'training',
 ]
 
 const HEALTH_CONDITION_OPTIONS = [

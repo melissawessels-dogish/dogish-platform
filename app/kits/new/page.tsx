@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,24 +11,30 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 
 const KIT_TYPES = [
+  { value: 'gear', label: 'Gear' },
+  { value: 'places', label: 'Places' },
   { value: 'food', label: 'Food & Treats' },
-  { value: 'gear', label: 'Gear & Accessories' },
-  { value: 'health', label: 'Health & Wellness' },
-  { value: 'places', label: 'Places & Trails' },
-  { value: 'grooming', label: 'Grooming' },
+  { value: 'health', label: 'Health & Care' },
+  { value: 'wishlist', label: 'Wish List' },
   { value: 'favorites', label: 'Favorites' },
 ] as const
 
 type KitTypeValue = typeof KIT_TYPES[number]['value']
 
+type UserDog = {
+  id: string
+  name: string
+  avatar: string | null
+}
+
 function getDescriptionPlaceholder(type: KitTypeValue | null, name: string | null): string {
   const n = name ?? 'your dog'
   switch (type) {
-    case 'food':      return `e.g. The kibble ${n} eats, favorite treats, supplements ${n} takes daily`
     case 'gear':      return `e.g. ${n}'s harness, leash, favorite toys, bed`
-    case 'health':    return `e.g. ${n}'s vet, medications, supplements, groomer`
     case 'places':    return `e.g. Our favorite parks, trails, and dog-friendly spots`
-    case 'grooming':  return `e.g. ${n}'s groomer, shampoo, brush, nail care routine`
+    case 'food':      return `e.g. The kibble ${n} eats, favorite treats, supplements`
+    case 'health':    return `e.g. ${n}'s vet, medications, supplements, groomer`
+    case 'wishlist':  return `e.g. Things we want to try`
     case 'favorites': return `e.g. Anything and everything ${n} loves`
     default:          return "What's this kit about?"
   }
@@ -40,6 +47,8 @@ export default function NewKitPage() {
 
   const dogId = searchParams.get('dog')
 
+  const [userDogs, setUserDogs] = useState<UserDog[]>([])
+  const [taggedDogs, setTaggedDogs] = useState<string[]>([])
   const [dogName, setDogName] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<KitTypeValue | null>(null)
   const [title, setTitle] = useState('')
@@ -63,16 +72,21 @@ export default function NewKitPage() {
 
       const username = human?.username ?? null
 
-      if (dogId) {
-        const { data: dog } = await supabase
-          .from('dog')
-          .select('name')
-          .eq('id', dogId)
-          .maybeSingle()
+      const { data: dogsData } = await supabase
+        .from('dog')
+        .select('id, name, avatar')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: true })
 
-        if (dog) {
-          setDogName(dog.name)
-          if (username) setCancelHref(`/${username}/${dog.name.toLowerCase()}`)
+      const dogs: UserDog[] = dogsData ?? []
+      setUserDogs(dogs)
+
+      if (dogId) {
+        const match = dogs.find((d) => d.id === dogId)
+        if (match) {
+          setDogName(match.name)
+          setTaggedDogs([dogId])
+          if (username) setCancelHref(`/${username}/${match.name.toLowerCase()}`)
         }
       } else {
         if (username) setCancelHref(`/${username}`)
@@ -86,7 +100,6 @@ export default function NewKitPage() {
     const next = selectedType === type ? null : type
     setSelectedType(next)
 
-    // Only auto-fill title if user hasn't manually edited it
     if (!titleManuallyEdited) {
       if (next) {
         const typeLabel = KIT_TYPES.find((t) => t.value === next)!.label
@@ -95,6 +108,12 @@ export default function NewKitPage() {
         setTitle('')
       }
     }
+  }
+
+  const toggleDog = (id: string) => {
+    setTaggedDogs((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    )
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,18 +125,26 @@ export default function NewKitPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      const { error: insertError } = await supabase
+      const { data: newKit, error: insertError } = await supabase
         .from('kit')
         .insert({
           owner_id: user.id,
-          dog_id: dogId ?? null,
           name: title.trim(),
           category: selectedType ?? null,
           description: description.trim() || null,
           is_public: !isPrivate,
         })
+        .select('id')
+        .single()
 
       if (insertError) throw insertError
+
+      if (taggedDogs.length > 0) {
+        const { error: kitDogsError } = await supabase
+          .from('kit_dogs')
+          .insert(taggedDogs.map((id) => ({ kit_id: newKit.id, dog_id: id })))
+        if (kitDogsError) throw kitDogsError
+      }
 
       router.push(cancelHref)
     } catch (err: unknown) {
@@ -144,12 +171,6 @@ export default function NewKitPage() {
               : 'Curate what matters to your pack'}
           </p>
         </div>
-
-        {dogId && dogName && (
-          <div className="mb-6 px-4 py-2.5 rounded-xl bg-[#F7F3EE] border border-[#0F2240]/10 text-sm text-[#0F2240]/70 text-center">
-            Creating a kit for <span className="font-semibold text-[#0F2240]">{dogName}</span>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
@@ -195,17 +216,49 @@ export default function NewKitPage() {
           {/* Description */}
           <div className="space-y-1.5">
             <Label htmlFor="description" className="text-[#0F2240] font-medium text-sm">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={getDescriptionPlaceholder(selectedType, dogName)}
-              rows={3}
-              maxLength={300}
-              className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] text-[#0F2240] resize-none"
-            />
-            <p className="text-xs text-[#0F2240]/40 text-right">{description.length}/300</p>
+            <div className="relative">
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={getDescriptionPlaceholder(selectedType, dogName)}
+                rows={3}
+                maxLength={300}
+                className="border-[#0F2240]/20 focus-visible:ring-[#0F2240] text-[#0F2240] resize-none pb-5"
+              />
+              <p className="absolute bottom-2 right-3 text-xs text-[#0F2240]/40 pointer-events-none">{description.length}/300</p>
+            </div>
           </div>
+
+          {/* Tag dogs */}
+          {userDogs.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-[#0F2240] font-medium text-sm">
+                Tag your dogs <span className="text-[#0F2240]/40 font-normal">(optional)</span>
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {userDogs.map((dog) => (
+                  <button
+                    key={dog.id}
+                    type="button"
+                    onClick={() => toggleDog(dog.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      taggedDogs.includes(dog.id)
+                        ? 'bg-[#0F2240] text-white'
+                        : 'bg-[#F7F3EE] text-[#0F2240] hover:bg-[#EDE3D6]'
+                    }`}
+                  >
+                    {dog.avatar && (
+                      <div className="relative w-4 h-4 rounded-full overflow-hidden shrink-0">
+                        <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
+                      </div>
+                    )}
+                    {dog.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Privacy */}
           <div className="flex items-start justify-between gap-4 p-4 rounded-xl bg-[#F7F3EE] border border-[#0F2240]/10">
