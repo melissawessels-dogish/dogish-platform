@@ -95,17 +95,17 @@ export default async function FeedPage() {
       .slice(0, 50)
   }
 
-  // Check which posts the current user has liked
+  // Check which posts the current user has liked and saved
   const likedPostIds = new Set<string>()
+  const savedPostIds = new Set<string>()
   if (posts.length > 0) {
-    const { data: likedRows } = await supabase
-      .from('like_')
-      .select('post_id')
-      .eq('human_id', user.id)
-      .in('post_id', posts.map((p) => p.id))
-    for (const row of likedRows ?? []) {
-      likedPostIds.add(row.post_id)
-    }
+    const postIds = posts.map((p) => p.id)
+    const [likedRows, savedRows] = await Promise.all([
+      supabase.from('like_').select('post_id').eq('human_id', user.id).in('post_id', postIds),
+      supabase.from('saved_post').select('post_id').eq('human_id', user.id).in('post_id', postIds),
+    ])
+    for (const row of likedRows.data ?? []) likedPostIds.add(row.post_id)
+    for (const row of savedRows.data ?? []) savedPostIds.add(row.post_id)
   }
 
   return (
@@ -151,6 +151,7 @@ export default async function FeedPage() {
                 key={post.id}
                 post={post}
                 isLiked={likedPostIds.has(post.id)}
+                isSaved={savedPostIds.has(post.id)}
                 currentUserId={user.id}
               />
             ))}

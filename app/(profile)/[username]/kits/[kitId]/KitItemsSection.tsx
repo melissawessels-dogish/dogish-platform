@@ -8,16 +8,15 @@ import { Input } from '@/components/ui/input'
 
 export type KitItem = {
   id: string
+  pack_id: string
   item_type: string
   position: number
-  name: string | null
-  brand: string | null
-  url: string | null
-  notes: string | null
+  note: string | null
+  added_at: string
   product_id: string | null
   place_id: string | null
   post_id: string | null
-  product: { id: string; name: string; brand: string | null; affiliate_url: string | null } | null
+  product: { id: string; name: string; brand: string | null; affiliate_url: string | null; category: string | null } | null
   place: { id: string; name: string; address: string | null; city: string | null; state: string | null; category: string | null } | null
   post: { id: string; images: string[] | null; body: string | null } | null
 }
@@ -539,16 +538,16 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
             const isPlace = item.item_type === 'place'
 
             const displayName = isPost
-              ? (item.post?.body || '(no caption)')
+              ? (item.post?.body || '')
               : isPlace
-              ? (item.place?.name ?? item.name ?? '')
-              : (item.product?.name ?? item.name ?? '')
+              ? (item.place?.name ?? '')
+              : (item.product?.name ?? '')
 
             const displaySub = isPlace
               ? ([item.place?.city, item.place?.state].filter(Boolean).join(', ') || null)
-              : (item.product?.brand ?? item.brand ?? null)
+              : (item.product?.brand ?? null)
 
-            const displayUrl = !isPost && !isPlace ? (item.product?.affiliate_url ?? item.url ?? null) : null
+            const displayUrl = !isPost && !isPlace ? (item.product?.affiliate_url ?? null) : null
 
             return (
               <div

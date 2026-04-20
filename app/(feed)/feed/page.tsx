@@ -89,13 +89,13 @@ async function FeedContent() {
     }
   }
 
-  // Fetch which posts the current user has already liked
-  const { data: likedRows } = await supabase
-    .from('like_')
-    .select('post_id')
-    .eq('human_id', user.id)
-    .in('post_id', postIds)
-  const likedSet = new Set((likedRows ?? []).map((r) => r.post_id as string))
+  // Fetch which posts the current user has liked and saved
+  const [likedRowsResult, savedRowsResult] = await Promise.all([
+    supabase.from('like_').select('post_id').eq('human_id', user.id).in('post_id', postIds),
+    supabase.from('saved_post').select('post_id').eq('human_id', user.id).in('post_id', postIds),
+  ])
+  const likedSet = new Set((likedRowsResult.data ?? []).map((r) => r.post_id as string))
+  const savedSet = new Set((savedRowsResult.data ?? []).map((r) => r.post_id as string))
 
   // Map to PostCard props
   const cards: PostCardProps[] = posts.map((post) => {
@@ -116,6 +116,7 @@ async function FeedContent() {
       created_at: post.created_at,
       dogs: dogsByPost[post.id] ?? [],
       isLiked: likedSet.has(post.id),
+      isSaved: savedSet.has(post.id),
     }
   })
 

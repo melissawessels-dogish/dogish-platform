@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Heart, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { BookmarkButton } from '@/components/bookmark-button'
 
 type Dog = {
   id: string
@@ -33,6 +34,7 @@ export type PostCardPost = {
 type Props = {
   post: PostCardPost
   isLiked: boolean
+  isSaved: boolean
   currentUserId: string
 }
 
@@ -49,7 +51,7 @@ function timeAgo(iso: string): string {
   return `${weeks}w ago`
 }
 
-export default function PostCard({ post, isLiked: initialIsLiked, currentUserId }: Props) {
+export default function PostCard({ post, isLiked: initialIsLiked, isSaved, currentUserId }: Props) {
   const supabase = createClient()
   const [isLiked, setIsLiked] = useState(initialIsLiked)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
@@ -130,7 +132,7 @@ export default function PostCard({ post, isLiked: initialIsLiked, currentUserId 
         </Link>
       )}
 
-      {/* Action row: like + comment */}
+      {/* Action row: like + comment + bookmark */}
       <div className="flex items-center gap-3 px-3 pt-2">
         <button
           type="button"
@@ -153,6 +155,9 @@ export default function PostCard({ post, isLiked: initialIsLiked, currentUserId 
         >
           <MessageCircle size={24} strokeWidth={1.8} />
         </Link>
+        <div className="ml-auto">
+          <BookmarkButton postId={post.id} initialSaved={isSaved} />
+        </div>
       </div>
 
       {/* Below image */}

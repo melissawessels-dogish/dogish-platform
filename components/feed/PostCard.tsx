@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Heart, MessageCircle, MapPin } from 'lucide-react'
 import { toggleLike } from '@/app/actions/likes'
+import { BookmarkButton } from '@/components/bookmark-button'
 
 export type PostCardProps = {
   id: string
@@ -18,6 +19,7 @@ export type PostCardProps = {
   created_at: string
   dogs: { id: string; name: string; avatar: string | null }[]
   isLiked: boolean
+  isSaved: boolean
 }
 
 function timeAgo(iso: string): string {
@@ -97,7 +99,7 @@ function ImageGrid({ images }: { images: string[] }) {
 }
 
 export default function PostCard(props: PostCardProps) {
-  const { id, author, post_type, body, images, place_name, like_count, comment_count, created_at, dogs, isLiked } = props
+  const { id, author, post_type, body, images, place_name, like_count, comment_count, created_at, dogs, isLiked, isSaved } = props
   const hasImages = images && images.length > 0
   const isPhoto = post_type === 'photo'
 
@@ -221,6 +223,9 @@ export default function PostCard(props: PostCardProps) {
           <MessageCircle size={15} strokeWidth={1.8} />
           {comment_count}
         </span>
+        <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
+          <BookmarkButton postId={id} initialSaved={isSaved} />
+        </div>
       </div>
     </article>
   )

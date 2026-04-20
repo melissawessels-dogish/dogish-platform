@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, PlusSquare, User } from 'lucide-react'
+import { Home, Search, PlusSquare, Bookmark, User } from 'lucide-react'
 
 type Props = {
   username: string | null
@@ -15,6 +15,7 @@ export default function BottomNav({ username }: Props) {
     { href: '/home', icon: Home, label: 'Home' },
     { href: '/search', icon: Search, label: 'Search' },
     { href: '/posts/new', icon: PlusSquare, label: 'New post' },
+    { href: '/saved', icon: Bookmark, label: 'Saved' },
     { href: username ? `/${username}` : '/onboarding/profile', icon: User, label: 'Profile' },
   ]
 

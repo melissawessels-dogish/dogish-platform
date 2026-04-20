@@ -74,11 +74,11 @@ export default async function KitDetailPage({
 
   const { data: itemsRaw } = await admin
     .from('kit_items')
-    .select('id, item_type, position, name, brand, url, notes, product_id, place_id, post_id, product:product_id(id, name, brand, affiliate_url), place:place_id(id, name, city_state, category), post:post_id(id, images, body)')
+    .select('id, pack_id, item_type, position, note, added_at, product_id, place_id, post_id, product:product_id(id, name, brand, affiliate_url, category), place:place_id(id, name, address, city, state, category), post:post_id(id, images, body)')
     .eq('kit_id', kitId)
     .order('position', { ascending: true })
 
-  const items = (itemsRaw ?? []) as KitItem[]
+  const items = (itemsRaw ?? []) as unknown as KitItem[]
 
   return (
     <div className="min-h-svh bg-white">
