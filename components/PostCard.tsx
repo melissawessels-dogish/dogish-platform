@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Heart, MessageCircle } from 'lucide-react'
+import { Heart, MessageCircle, Send } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BookmarkButton } from '@/components/bookmark-button'
+import CommentDrawer, { type DrawerCurrentUser } from '@/components/comment-drawer'
 
 type Dog = {
   id: string
@@ -36,6 +37,7 @@ type Props = {
   isLiked: boolean
   isSaved: boolean
   currentUserId: string
+  currentUser?: DrawerCurrentUser | null
 }
 
 function timeAgo(iso: string): string {
@@ -51,11 +53,13 @@ function timeAgo(iso: string): string {
   return `${weeks}w ago`
 }
 
-export default function PostCard({ post, isLiked: initialIsLiked, isSaved, currentUserId }: Props) {
+export default function PostCard({ post, isLiked: initialIsLiked, isSaved, currentUserId, currentUser = null }: Props) {
   const supabase = createClient()
   const [isLiked, setIsLiked] = useState(initialIsLiked)
   const [likeCount, setLikeCount] = useState(post.like_count ?? 0)
   const [pending, setPending] = useState(false)
+  const [commentOpen, setCommentOpen] = useState(false)
+  const [commentCount, setCommentCount] = useState(post.comment_count ?? 0)
 
   const author = post.author
   const image = post.images?.[0] ?? null
@@ -65,7 +69,6 @@ export default function PostCard({ post, isLiked: initialIsLiked, isSaved, curre
     if (pending) return
     const wasLiked = isLiked
 
-    // Optimistic update
     setIsLiked(!wasLiked)
     setLikeCount((c) => wasLiked ? c - 1 : c + 1)
     setPending(true)
@@ -85,7 +88,6 @@ export default function PostCard({ post, isLiked: initialIsLiked, isSaved, curre
         if (error) throw error
       }
     } catch {
-      // Revert on error
       setIsLiked(wasLiked)
       setLikeCount((c) => wasLiked ? c + 1 : c - 1)
     } finally {
@@ -94,125 +96,125 @@ export default function PostCard({ post, isLiked: initialIsLiked, isSaved, curre
   }
 
   return (
-    <article style={{ borderBottom: '1px solid #F0F0F0' }}>
+    <>
+      <article style={{ borderBottom: '1px solid #F0F0F0' }}>
 
-      {/* Author row */}
-      <div className="flex items-center gap-2.5 px-3 py-2">
-        <Link href={author.username ? `/${author.username}` : '/'} className="shrink-0">
-          <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[#EDE3D6]">
-            {author.avatar ? (
-              <Image src={author.avatar} alt={author.display_name ?? ''} fill className="object-cover" />
-            ) : (
-              <div className="flex items-center justify-center h-full text-sm font-bold text-[#0F2240]/40">
-                {(author.display_name ?? author.username ?? '?')[0].toUpperCase()}
+        {/* Header */}
+        <div className="px-3 pt-2 pb-2 flex flex-col gap-1.5">
+          {/* Avatar + name row */}
+          <div className="flex items-start gap-2.5">
+            <Link href={author.username ? `/${author.username}` : '/'} className="shrink-0">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[#EDE3D6]">
+                {author.avatar ? (
+                  <Image src={author.avatar} alt={author.display_name ?? ''} fill className="object-cover" />
+                ) : (
+                  <div className="flex items-center justify-center h-full text-sm font-bold text-[#0F2240]/40">
+                    {(author.display_name ?? author.username ?? '?')[0].toUpperCase()}
+                  </div>
+                )}
               </div>
-            )}
+            </Link>
+            <div className="min-w-0">
+              <Link href={author.username ? `/${author.username}` : '/'} className="hover:underline underline-offset-2">
+                <p className="text-[13px] font-semibold text-[#0F2240] leading-tight truncate">
+                  {author.display_name ?? author.username}
+                </p>
+              </Link>
+              {author.username && (
+                <p className="text-[11px] text-[#0F2240]/45 leading-tight">
+                  @{author.username} · {timeAgo(post.created_at)}
+                </p>
+              )}
+            </div>
           </div>
-        </Link>
-        <div className="min-w-0 flex-1">
-          <Link href={author.username ? `/${author.username}` : '/'} className="hover:underline underline-offset-2">
-            <p className="text-[13px] font-semibold text-[#0F2240] leading-tight truncate">
-              {author.display_name ?? author.username}
-            </p>
-          </Link>
-          {author.username && (
-            <p className="text-[11px] text-[#0F2240]/45 leading-tight">
-              @{author.username} · {timeAgo(post.created_at)}
-            </p>
+
+          {/* Tagged dogs */}
+          {taggedDogs.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+              {taggedDogs.map(({ dog }) => (
+                <Link
+                  key={dog.id}
+                  href={author.username ? `/${author.username}/${dog.name.toLowerCase()}` : '/'}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}
+                >
+                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[#EDE3D6] shrink-0">
+                    {dog.avatar ? (
+                      <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-[10px] font-bold text-[#0F2240]/40">
+                        {dog.name[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[13px] font-medium text-[#0F2240]">
+                    {dog.name}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Caption */}
+          {post.body && (
+            <p className="text-sm text-[#0F2240] leading-snug">{post.body}</p>
           )}
         </div>
-      </div>
 
-      {/* Photo — full bleed, 4:5, object-cover */}
-      {image && (
-        <Link href={`/posts/${post.id}`} className="block">
-          <div className="relative w-full aspect-[4/5]">
-            <Image src={image} alt="" fill className="object-cover" />
-          </div>
-        </Link>
-      )}
+        {/* Photo — full bleed, 4:5, object-cover */}
+        {image && (
+          <Link href={`/posts/${post.id}`} className="block">
+            <div className="relative w-full aspect-[4/5]">
+              <Image src={image} alt="" fill className="object-cover" />
+            </div>
+          </Link>
+        )}
 
-      {/* Action row: like + comment + bookmark */}
-      <div className="flex items-center gap-3 px-3 pt-2">
-        <button
-          type="button"
-          onClick={handleLike}
-          disabled={pending}
-          aria-label={isLiked ? 'Unlike' : 'Like'}
-          className="transition-transform active:scale-90 disabled:opacity-60"
-        >
-          <Heart
-            size={24}
-            strokeWidth={1.8}
-            fill={isLiked ? '#e11d48' : 'none'}
-            stroke={isLiked ? '#e11d48' : '#0F2240'}
-          />
-        </button>
-        <Link
-          href={`/posts/${post.id}#comments`}
-          aria-label="Comments"
-          className="flex items-center justify-center p-1 -m-1 text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
-        >
-          <MessageCircle size={24} strokeWidth={1.8} />
-        </Link>
-        <div className="ml-auto">
+        {/* Action row */}
+        <div className="flex items-center gap-4 px-3 pt-3 pb-3">
+          <button
+            type="button"
+            onClick={handleLike}
+            disabled={pending}
+            aria-label={isLiked ? 'Unlike' : 'Like'}
+            className="flex items-center gap-1.5 transition-transform active:scale-90 disabled:opacity-60"
+          >
+            <Heart
+              className={`h-5 w-5 transition-all ${isLiked ? 'fill-[#0F2240] stroke-[#0F2240]' : 'fill-none stroke-[#0F2240]/60'}`}
+              strokeWidth={1.8}
+            />
+            <span className={`text-sm ${isLiked ? 'text-[#0F2240]' : 'text-[#0F2240]/60'}`}>
+              {likeCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCommentOpen(true)}
+            aria-label="Comments"
+            className="flex items-center gap-1.5 text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
+          >
+            <MessageCircle className="h-5 w-5" strokeWidth={1.8} />
+            <span className="text-sm">{commentCount}</span>
+          </button>
+          <button
+            type="button"
+            aria-label="Share"
+            className="flex items-center text-[#0F2240]/60"
+          >
+            <Send className="h-5 w-5" strokeWidth={1.8} />
+          </button>
           <BookmarkButton postId={post.id} initialSaved={isSaved} />
         </div>
-      </div>
 
-      {/* Below image */}
-      <div className="px-3 pt-1.5 pb-3 flex flex-col gap-1">
+      </article>
 
-        {/* Like + comment counts */}
-        <p className="text-[12px] font-semibold text-[#0F2240]">
-          {likeCount} {likeCount === 1 ? 'like' : 'likes'}
-          <span className="font-normal text-[#0F2240]/45 ml-2">
-            {post.comment_count ?? 0} {(post.comment_count ?? 0) === 1 ? 'comment' : 'comments'}
-          </span>
-        </p>
-
-        {/* Caption */}
-        {post.body && (
-          <p className="text-[13px] text-[#0F2240] leading-snug">
-            <span className="font-semibold mr-1">{author.username}</span>
-            {post.body}
-          </p>
-        )}
-
-        {/* Tagged dogs */}
-        {taggedDogs.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap pt-0.5">
-            {taggedDogs.map(({ dog }) => (
-              <Link
-                key={dog.id}
-                href={author.username ? `/${author.username}/${dog.name.toLowerCase()}` : '/'}
-                className="flex items-center gap-1 group"
-              >
-                <div className="relative w-4 h-4 rounded-full overflow-hidden bg-[#EDE3D6] shrink-0">
-                  {dog.avatar ? (
-                    <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-[8px] font-bold text-[#0F2240]/40">
-                      {dog.name[0].toUpperCase()}
-                    </div>
-                  )}
-                </div>
-                <span className="text-[11px] font-medium text-[#0F2240] underline underline-offset-2 group-hover:text-[#0F2240]/70 transition-colors">
-                  {dog.name}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {/* Comment count */}
-        <Link
-          href={`/posts/${post.id}#comments`}
-          className="text-[12px] text-[#0F2240]/45 hover:text-[#0F2240]/70 underline underline-offset-2 transition-colors"
-        >
-          View all {post.comment_count ?? 0} comments
-        </Link>
-      </div>
-    </article>
+      <CommentDrawer
+        postId={post.id}
+        open={commentOpen}
+        onClose={() => setCommentOpen(false)}
+        commentCount={commentCount}
+        onCommentCountChange={(delta) => setCommentCount((c) => c + delta)}
+        currentUser={currentUser}
+      />
+    </>
   )
 }

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
+import ProfileStats from '@/components/profile-stats'
 
 type Dog = {
   id: string
@@ -216,19 +217,13 @@ export default async function ProfilePage({
           )}
 
           {/* Stats */}
-          <div className="flex items-center gap-1.5 mt-2 text-[13px] text-[#0F2240]/50">
-            <span>
-              <span className="font-semibold text-[#0F2240]">{postList.length}</span> Posts
-            </span>
-            <span className="select-none">·</span>
-            <span>
-              <span className="font-semibold text-[#0F2240]">{followerCount}</span> Followers
-            </span>
-            <span className="select-none">·</span>
-            <span>
-              <span className="font-semibold text-[#0F2240]">{h.following_count ?? 0}</span> Following
-            </span>
-          </div>
+          <ProfileStats
+            profileUserId={h.id}
+            currentUserId={user?.id ?? null}
+            postCount={postList.length}
+            followerCount={followerCount}
+            followingCount={h.following_count ?? 0}
+          />
         </div>
 
         <div className="border-t border-[#0F2240]/8" />

@@ -3,6 +3,19 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
+export async function getFollowState(targetHumanId: string): Promise<boolean> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return false
+  const { data } = await supabase
+    .from('follow')
+    .select('id')
+    .eq('follower_id', user.id)
+    .eq('target_human_id', targetHumanId)
+    .maybeSingle()
+  return !!data
+}
+
 export async function followHuman(targetHumanId: string, targetUsername: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

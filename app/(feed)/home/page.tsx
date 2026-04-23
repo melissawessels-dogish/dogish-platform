@@ -16,7 +16,7 @@ export default async function FeedPage() {
   // Get current user's human row
   const { data: me } = await supabase
     .from('human')
-    .select('id, username')
+    .select('id, username, display_name, avatar')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -153,6 +153,7 @@ export default async function FeedPage() {
                 isLiked={likedPostIds.has(post.id)}
                 isSaved={savedPostIds.has(post.id)}
                 currentUserId={user.id}
+                currentUser={me ?? null}
               />
             ))}
           </div>
