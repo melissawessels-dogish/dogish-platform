@@ -1,0 +1,93 @@
+{
+  "seededAt": "2026-04-24T02:18:09.884Z",
+  "users": [
+    {
+      "id": "6dfa4809-0b60-4ebe-b48e-6781d0ba7831",
+      "email": "sarahchen@dogish.com"
+    },
+    {
+      "id": "39f88767-4058-44f5-a9f8-60bb0ae4a2dc",
+      "email": "jamieobrien@dogish.com"
+    },
+    {
+      "id": "fb838948-d083-4c12-a1f6-f67211c8ab63",
+      "email": "priyapatel@dogish.com"
+    },
+    {
+      "id": "a0ce0e12-31e3-4d9a-9c0f-fdd95e37dff4",
+      "email": "tomkelly@dogish.com"
+    },
+    {
+      "id": "70eb31a5-fdab-4cef-855c-777722d3de4d",
+      "email": "lauramarcus@dogish.com"
+    },
+    {
+      "id": "5a32ef77-a06a-46fb-bff9-44164d957479",
+      "email": "devonwright@dogish.com"
+    },
+    {
+      "id": "9aae6396-5d8b-4cf5-9e1e-9d58bce7ccf1",
+      "email": "nicolekim@dogish.com"
+    },
+    {
+      "id": "29635de3-55a2-4e9d-b124-a19d08e5b462",
+      "email": "brendanflynn@dogish.com"
+    },
+    {
+      "id": "1ae2ea16-3b7a-45a9-b415-c8103ce28137",
+      "email": "amandatorres@dogish.com"
+    },
+    {
+      "id": "f40e6e68-d2c3-4ee0-a46b-577026a6fd0f",
+      "email": "mikesullivan@dogish.com"
+    },
+    {
+      "id": "24a462a4-7833-4e8b-8422-a496286cdec3",
+      "email": "jessicapark@dogish.com"
+    },
+    {
+      "id": "0a8bf870-56f8-4d15-8cab-bdd5900a7006",
+      "email": "ryanmurphy@dogish.com"
+    },
+    {
+      "id": "437bdb83-2da7-4fba-8e50-2d852525749d",
+      "email": "carolinehall@dogish.com"
+    },
+    {
+      "id": "9c48b9ea-7d76-4a8d-9415-15dfc2b39d4e",
+      "email": "alexrivera@dogish.com"
+    },
+    {
+      "id": "0b7ff226-201e-4b03-ab63-43d564c316bc",
+      "email": "madelinecooper@dogish.com"
+    },
+    {
+      "id": "7288c060-58e7-45c5-af26-d47e5f0b6093",
+      "email": "zachthompson@dogish.com"
+    },
+    {
+      "id": "a5059441-923c-4f68-a79e-d0dc2486cca5",
+      "email": "oliviabennett@dogish.com"
+    },
+    {
+      "id": "6e140f98-bde0-4c04-b08b-74eb26daaa64",
+      "email": "nathangoldberg@dogish.com"
+    },
+    {
+      "id": "9e365c97-8da5-4ac1-90a4-663dc225fb38",
+      "email": "sophialee@dogish.com"
+    }
+  ],
+  "placeIds": [
+    "8b60f89f-5023-4588-b4ce-a46d133285c3",
+    "e5277548-2e96-4af6-b493-01f69ac47b5b",
+    "4ae9bca3-f454-4290-a5d9-4d3aab157fc4",
+    "aba9e290-b998-4a51-b7ec-b8cf24e8f29b",
+    "3bed3999-cbd5-445d-9806-9739f67185f0",
+    "16d12904-cc63-449e-9f3e-6dcca7db1fbc",
+    "ca841dff-26ce-4699-b2c0-6f8d65e51ab8",
+    "ffa5b3d7-4333-47d7-994e-55446426704e",
+    "eeea12bb-c6d5-4e2a-9e05-2ed55d71b043",
+    "ccbe9594-34e3-4ade-a6c6-fb754fc5aa37"
+  ]
+}

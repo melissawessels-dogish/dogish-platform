@@ -13,7 +13,7 @@ export default function BottomNav({ username }: Props) {
 
   const items = [
     { href: '/home', icon: Home, label: 'Home' },
-    { href: '/search', icon: Search, label: 'Search' },
+    { href: '/explore', icon: Search, label: 'Explore' },
     { href: '/posts/new', icon: PlusSquare, label: 'New post' },
     { href: '/saved', icon: Bookmark, label: 'Saved' },
     { href: username ? `/${username}` : '/onboarding/profile', icon: User, label: 'Profile' },
@@ -23,7 +23,7 @@ export default function BottomNav({ username }: Props) {
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#0F2240]/8">
       <div className="max-w-[640px] mx-auto flex items-center justify-around h-14 px-2">
         {items.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || (label === 'Profile' && username && pathname === `/${username}`)
+          const active = pathname === href || (label === 'Explore' && pathname.startsWith('/explore')) || (label === 'Profile' && username && pathname === `/${username}`)
           return (
             <Link
               key={href}
