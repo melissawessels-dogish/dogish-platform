@@ -140,16 +140,13 @@ const DOGS: DogDef[] = [
 ]
 
 const PLACES = [
-  { name: 'Peters Park Dog Run',       address: '1224 W Roosevelt Rd', city: 'Chicago',   state: 'IL', category: 'dog_park' },
-  { name: 'Humboldt Park Dog Beach',   address: 'N Sacramento Ave',    city: 'Chicago',   state: 'IL', category: 'dog_beach' },
-  { name: 'Millennium Park Lawn',      address: '201 E Randolph St',   city: 'Chicago',   state: 'IL', category: 'park' },
-  { name: 'Dog Haus Chicago',          address: '2401 N Milwaukee Ave', city: 'Chicago',  state: 'IL', category: 'restaurant' },
-  { name: 'Boston Common Dog Park',    address: '135 Tremont St',      city: 'Boston',    state: 'MA', category: 'dog_park' },
-  { name: 'Jamaica Pond Trails',       address: 'Jamaicaway',          city: 'Boston',    state: 'MA', category: 'park' },
-  { name: 'Castle Island Off-Leash',   address: 'Day Blvd',            city: 'Boston',    state: 'MA', category: 'dog_park' },
-  { name: 'Muddy Paws Wash',           address: '42 Wareham St',       city: 'Boston',    state: 'MA', category: 'grooming' },
-  { name: 'Cambridge Dog Park',        address: '175 Gore St',         city: 'Cambridge', state: 'MA', category: 'dog_park' },
-  { name: 'The Biscuit Bar',           address: '900 W Randolph St',   city: 'Chicago',   state: 'IL', category: 'restaurant' },
+  { name: 'Cold Spring Park Dog Run', category: 'park',  address: '1250 Beacon St',       city: 'Newton',  state: 'MA', lat: 42.3288, lng: -71.2144 },
+  { name: 'Richard J. McGrath Park',  category: 'park',  address: '1576 Washington St',   city: 'Newton',  state: 'MA', lat: 42.3428, lng: -71.2351 },
+  { name: 'Peters Park Dog Run',      category: 'park',  address: '1035 Columbus Ave',    city: 'Boston',  state: 'MA', lat: 42.3433, lng: -71.0772 },
+  { name: 'Jamaica Pond Trails',      category: 'trail', address: '507 Pond St',          city: 'Boston',  state: 'MA', lat: 42.3210, lng: -71.1153 },
+  { name: 'Wiggly Field Dog Park',    category: 'park',  address: '2645 N Sheffield Ave', city: 'Chicago', state: 'IL', lat: 41.9302, lng: -87.6531 },
+  { name: 'Montrose Dog Beach',       category: 'park',  address: '601 W Montrose Ave',   city: 'Chicago', state: 'IL', lat: 41.9656, lng: -87.6389 },
+  { name: 'Horner Park Dog Area',     category: 'park',  address: '2741 W Montrose Ave',  city: 'Chicago', state: 'IL', lat: 41.9589, lng: -87.6857 },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

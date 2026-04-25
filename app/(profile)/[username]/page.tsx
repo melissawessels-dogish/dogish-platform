@@ -186,7 +186,7 @@ export default async function ProfilePage({
                   href="/login"
                   className="text-[13px] font-semibold px-6 py-1.5 rounded-full bg-[#0F2240] text-white hover:bg-[#0F2240]/90 transition-colors whitespace-nowrap"
                 >
-                  Join their pack
+                  Follow
                 </Link>
               ) : (
                 <FollowButton

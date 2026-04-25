@@ -158,7 +158,7 @@ export default function FollowListDrawer({ profileUserId, currentUserId, type, o
                         : 'bg-[#0F2240] text-white hover:bg-[#0F2240]/90'
                     }`}
                   >
-                    {isFollowing ? 'Following' : 'Join their pack'}
+                    {isFollowing ? 'Following' : 'Follow'}
                   </button>
                 )}
               </div>

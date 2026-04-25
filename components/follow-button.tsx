@@ -78,7 +78,7 @@ export default function FollowButton({
             : 'bg-[#0F2240] text-white hover:bg-[#0F2240]/90'
         }`}
       >
-        {isFollowing ? 'Following' : 'Join their pack'}
+        {isFollowing ? 'Following' : 'Follow'}
       </Button>
       {error && (
         <p className="text-xs text-red-500">{error}</p>

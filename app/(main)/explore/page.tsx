@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { Search } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SuggestedPeopleSection, { type SuggestedPerson } from './SuggestedPeopleSection'
 import SuggestedDogsSection, { type SuggestedDog } from './SuggestedDogsSection'
 import PopularPostsSection from './PopularPostsSection'
+import NeighborhoodPlaces from '@/components/explore/NeighborhoodPlaces'
+import SearchDropdown from '@/components/explore/SearchDropdown'
 
 type PopularBreed = {
   id: string
@@ -234,20 +234,13 @@ export default async function ExplorePage() {
       </div>
 
       {/* Search bar */}
-      <div className="px-4 pt-3 pb-5">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#0F2240]/35 pointer-events-none" />
-          <Input
-            type="search"
-            placeholder="Search dogs, people, breeds, places…"
-            className="pl-9 h-10 rounded-xl border-[#0F2240]/15 bg-[#F7F3EE] placeholder:text-[#0F2240]/35 focus-visible:border-[#0F2240]/30 focus-visible:ring-0"
-            readOnly
-          />
-        </div>
-      </div>
+      <SearchDropdown />
 
       {/* Popular posts */}
       <PopularPostsSection posts={popularPosts} />
+
+      {/* In your neighborhood */}
+      <NeighborhoodPlaces />
 
       {/* Suggested people */}
       {people.length > 0 && (
@@ -294,6 +287,7 @@ export default async function ExplorePage() {
           </div>
         </section>
       )}
+
 
     </div>
   )
