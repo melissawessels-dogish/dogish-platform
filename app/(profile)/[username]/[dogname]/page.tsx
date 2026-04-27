@@ -77,7 +77,6 @@ export default async function DogProfilePage({
       is_private,
       owner_id,
       follower_count,
-      favorite_places_kit_id,
       dog_breeds(
         is_primary,
         breed:breed(name)
@@ -90,7 +89,14 @@ export default async function DogProfilePage({
   const dog = dogRows?.[0] ?? null
   if (!dog) notFound()
 
-  const d = dog as DogPage
+  // Fetch favorite_places_kit_id separately — column may not exist if migration is pending
+  const { data: dogExtra } = await admin
+    .from('dog')
+    .select('favorite_places_kit_id')
+    .eq('id', dog.id)
+    .maybeSingle()
+
+  const d = { ...(dog as DogPage), favorite_places_kit_id: dogExtra?.favorite_places_kit_id ?? null }
   const allBreeds = getAllBreeds(d)
 
   const { data: { user } } = await supabase.auth.getUser()
