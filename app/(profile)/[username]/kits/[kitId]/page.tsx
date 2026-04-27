@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import KitItemsSection, { type KitItem } from './KitItemsSection'
 import DeleteKitButton from './DeleteKitButton'
+import { slugify } from '@/lib/slugify'
 
 type Kit = {
   id: string
@@ -152,7 +153,7 @@ export default async function KitDetailPage({
               {taggedDogs.map((dog) => (
                 <Link
                   key={dog.id}
-                  href={`/${username}/${dog.name.toLowerCase()}`}
+                  href={`/${username}/${slugify(dog.name)}`}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F7F3EE] hover:bg-[#EDE3D6] transition-colors"
                 >
                   <div className="relative w-5 h-5 rounded-full overflow-hidden bg-[#EDE3D6] shrink-0">

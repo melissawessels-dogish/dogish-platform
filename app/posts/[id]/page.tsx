@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CommentsSection, { type Comment } from '@/components/CommentsSection'
 import LikeButton from '@/components/LikeButton'
+import { slugify } from '@/lib/slugify'
 
 type Author = {
   id: string
@@ -193,7 +194,7 @@ export default async function PostPage({
             {taggedDogs.map(({ dog }) => (
               <Link
                 key={dog.id}
-                href={author.username ? `/${author.username}/${dog.name.toLowerCase()}` : '/'}
+                href={author.username ? `/${author.username}/${slugify(dog.name)}` : '/'}
                 className="flex items-center gap-1.5 group"
               >
                 <div className="relative w-6 h-6 rounded-full overflow-hidden bg-[#EDE3D6] shrink-0 group-hover:ring-2 group-hover:ring-[#0F2240] transition-all">

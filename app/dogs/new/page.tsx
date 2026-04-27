@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import Image from 'next/image'
+import { slugify } from '@/lib/slugify'
 
 type DogSize = 'xs' | 'small' | 'medium' | 'large' | 'xl'
 type DogSex = 'male' | 'female' | 'unknown'
@@ -607,6 +608,13 @@ export default function NewDogPage() {
         .order('created_at', { ascending: true })
       setAllDogs(dogs ?? [])
 
+      console.log('[dog creation] debug', {
+        dogId: savedDogId,
+        dogName: form.name,
+        ownerUsername: human?.username,
+        expectedUrl: `/${human?.username}/${slugify(form.name)}`,
+      })
+
       setCreatedDogId(savedDogId)
       setStep(TOTAL_STEPS - 1)
     } catch (err: unknown) {
@@ -1004,7 +1012,7 @@ export default function NewDogPage() {
                     </Button>
                     <Button
                       variant="outline"
-                      onClick={() => humanProfile?.username ? router.push(`/${humanProfile.username}/${form.name.toLowerCase()}`) : router.push('/')}
+                      onClick={() => humanProfile?.username ? router.push(`/${humanProfile.username}/${slugify(form.name)}`) : router.push('/')}
                       className="border-[#0F2240]/20 text-[#0F2240] hover:bg-[#EDE3D6] h-10 text-sm w-full"
                     >
                       View your profile

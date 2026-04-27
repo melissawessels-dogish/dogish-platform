@@ -36,7 +36,7 @@ type Results = {
 }
 
 function toSlug(name: string) {
-  return name.toLowerCase().replace(/\s+/g, '-')
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
 function Avatar({

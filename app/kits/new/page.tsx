@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
+import { slugify } from '@/lib/slugify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -88,7 +89,7 @@ export default function NewKitPage() {
         if (match) {
           setDogName(match.name)
           setTaggedDogs([dogId])
-          if (username) setCancelHref(`/${username}/${match.name.toLowerCase()}`)
+          if (username) setCancelHref(`/${username}/${slugify(match.name)}`)
         }
       } else {
         if (username) setCancelHref(`/${username}`)

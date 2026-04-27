@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
 import FavoritePlacesSection from './FavoritePlacesSection'
+import { slugify } from '@/lib/slugify'
 
 type DogPage = {
   id: string
@@ -62,7 +63,7 @@ export default async function DogProfilePage({
 
   const owner = ownerData as Owner
 
-  // Find dog by owner + name (case-insensitive)
+  // Find dog by owner, matching [dogname] param as a slug against all owner's dogs
   const { data: dogRows } = await admin
     .from('dog')
     .select(`
@@ -83,10 +84,8 @@ export default async function DogProfilePage({
       )
     `)
     .eq('owner_id', owner.id)
-    .ilike('name', dogname)
-    .limit(1)
 
-  const dog = dogRows?.[0] ?? null
+  const dog = (dogRows ?? []).find((d) => slugify(d.name) === dogname) ?? null
   if (!dog) notFound()
 
   // Fetch favorite_places_kit_id separately — column may not exist if migration is pending

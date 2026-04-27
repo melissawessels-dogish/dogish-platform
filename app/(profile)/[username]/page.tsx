@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
 import ProfileStats from '@/components/profile-stats'
+import { slugify } from '@/lib/slugify'
 
 type Dog = {
   id: string
@@ -135,7 +136,7 @@ export default async function ProfilePage({
             {dogList.map((dog) => (
               <Link
                 key={dog.id}
-                href={`/${username}/${dog.name.toLowerCase()}`}
+                href={`/${username}/${slugify(dog.name)}`}
                 className="flex flex-col items-center gap-1 shrink-0 group"
               >
                 <div
