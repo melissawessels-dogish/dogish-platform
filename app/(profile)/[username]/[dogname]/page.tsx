@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
+import FavoritePlacesSection from './FavoritePlacesSection'
 
 type DogPage = {
   id: string
@@ -17,10 +18,16 @@ type DogPage = {
   is_private: boolean
   owner_id: string
   follower_count: number | null
+  favorite_places_kit_id: string | null
   dog_breeds: {
     is_primary: boolean
     breed: { name: string } | null
   }[]
+}
+
+type FavPlace = {
+  id: string
+  place: { id: string; name: string; city: string | null; state: string | null } | null
 }
 
 type Owner = {
@@ -70,6 +77,7 @@ export default async function DogProfilePage({
       is_private,
       owner_id,
       follower_count,
+      favorite_places_kit_id,
       dog_breeds(
         is_primary,
         breed:breed(name)
@@ -121,6 +129,17 @@ export default async function DogProfilePage({
     .map((r) => r.post as { id: string; images: string[] | null; is_private: boolean } | null)
     .filter((p): p is { id: string; images: string[] | null; is_private: boolean } => p !== null)
     .filter((p) => !p.is_private || isOwnDog)
+
+  let favPlaces: FavPlace[] = []
+  if (d.favorite_places_kit_id) {
+    const { data: favItems } = await admin
+      .from('kit_items')
+      .select('id, place:place_id(id, name, city, state)')
+      .eq('pack_id', d.favorite_places_kit_id)
+      .eq('item_type', 'place')
+      .order('added_at', { ascending: false })
+    favPlaces = (favItems ?? []) as FavPlace[]
+  }
 
   return (
     <div className="min-h-svh bg-white">
@@ -305,6 +324,17 @@ export default async function DogProfilePage({
             <p className="text-sm text-[#0F2240]/40 py-4 text-center">No kits yet.</p>
           )}
         </div>
+
+        {d.favorite_places_kit_id && (
+          <>
+            <div className="border-t border-[#0F2240]/8" />
+            <FavoritePlacesSection
+              kitId={d.favorite_places_kit_id}
+              initialItems={favPlaces}
+              isOwner={isOwnDog}
+            />
+          </>
+        )}
 
       </div>
 

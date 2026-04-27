@@ -521,6 +521,25 @@ export default function NewDogPage() {
           .single()
         if (dogError) throw dogError
         savedDogId = dog.id
+
+        // Auto-create Favorite Places kit for new dogs
+        const { data: favKit } = await supabase
+          .from('kit')
+          .insert({
+            owner_id: user.id,
+            dog_id: savedDogId,
+            title: 'Favorite Places',
+            description: 'Places we love',
+            is_private: false,
+          })
+          .select('id')
+          .single()
+        if (favKit) {
+          await supabase
+            .from('dog')
+            .update({ favorite_places_kit_id: favKit.id })
+            .eq('id', savedDogId)
+        }
       }
 
       if (form.breeds.length > 0) {
