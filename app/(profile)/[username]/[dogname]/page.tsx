@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
-import FavoritePlacesSection from './FavoritePlacesSection'
 import { slugify } from '@/lib/slugify'
 
 type DogPage = {
@@ -19,16 +18,10 @@ type DogPage = {
   is_private: boolean
   owner_id: string
   follower_count: number | null
-  favorite_places_kit_id: string | null
   dog_breeds: {
     is_primary: boolean
     breed: { name: string } | null
   }[]
-}
-
-type FavPlace = {
-  id: string
-  place: { id: string; name: string; city: string | null; state: string | null } | null
 }
 
 type Owner = {
@@ -88,14 +81,7 @@ export default async function DogProfilePage({
   const dog = (dogRows ?? []).find((d) => slugify(d.name) === dogname) ?? null
   if (!dog) notFound()
 
-  // Fetch favorite_places_kit_id separately — column may not exist if migration is pending
-  const { data: dogExtra } = await admin
-    .from('dog')
-    .select('favorite_places_kit_id')
-    .eq('id', dog.id)
-    .maybeSingle()
-
-  const d = { ...(dog as DogPage), favorite_places_kit_id: dogExtra?.favorite_places_kit_id ?? null }
+  const d = dog as DogPage
   const allBreeds = getAllBreeds(d)
 
   const { data: { session } } = await supabase.auth.getSession()
@@ -135,17 +121,6 @@ export default async function DogProfilePage({
     .map((r) => r.post as { id: string; images: string[] | null; is_private: boolean } | null)
     .filter((p): p is { id: string; images: string[] | null; is_private: boolean } => p !== null)
     .filter((p) => !p.is_private || isOwnDog)
-
-  let favPlaces: FavPlace[] = []
-  if (d.favorite_places_kit_id) {
-    const { data: favItems } = await admin
-      .from('kit_items')
-      .select('id, place:place_id(id, name, city, state)')
-      .eq('pack_id', d.favorite_places_kit_id)
-      .eq('item_type', 'place')
-      .order('added_at', { ascending: false })
-    favPlaces = (favItems ?? []) as FavPlace[]
-  }
 
   return (
     <div className="min-h-svh bg-white">
@@ -297,7 +272,7 @@ export default async function DogProfilePage({
         <div className="border-t border-[#0F2240]/8" />
 
         {/* Kits section */}
-        <div className="px-4 py-5">
+        <div className="px-4 py-5 pb-24">
           <h2 className="text-base font-bold text-[#0F2240] mb-4">Kits</h2>
           {kitList.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
@@ -331,19 +306,7 @@ export default async function DogProfilePage({
           )}
         </div>
 
-        {d.favorite_places_kit_id && (
-          <>
-            <div className="border-t border-[#0F2240]/8" />
-            <FavoritePlacesSection
-              kitId={d.favorite_places_kit_id}
-              initialItems={favPlaces}
-              isOwner={isOwnDog}
-            />
-          </>
-        )}
-
       </div>
-
     </div>
   )
 }

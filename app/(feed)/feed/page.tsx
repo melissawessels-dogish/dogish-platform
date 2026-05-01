@@ -91,12 +91,20 @@ async function FeedContent() {
   }
 
   // Fetch which posts the current user has liked and saved
-  const [likedRowsResult, savedRowsResult] = await Promise.all([
+  const [likedRowsResult, savedKitResult] = await Promise.all([
     supabase.from('like_').select('post_id').eq('human_id', user.id).in('post_id', postIds),
-    supabase.from('saved_post').select('post_id').eq('human_id', user.id).in('post_id', postIds),
+    supabase.from('kit').select('id').eq('owner_id', user.id).eq('title', 'Saved').eq('is_system', true).limit(1).maybeSingle(),
   ])
   const likedSet = new Set((likedRowsResult.data ?? []).map((r) => r.post_id as string))
-  const savedSet = new Set((savedRowsResult.data ?? []).map((r) => r.post_id as string))
+  const savedSet = new Set<string>()
+  if (savedKitResult.data?.id) {
+    const { data: savedItems } = await supabase
+      .from('kit_items')
+      .select('post_id')
+      .eq('pack_id', savedKitResult.data.id)
+      .in('post_id', postIds)
+    for (const row of (savedItems ?? []) as { post_id: string }[]) savedSet.add(row.post_id)
+  }
 
   // Map to PostCard props
   const cards: PostCardProps[] = posts.map((post) => {

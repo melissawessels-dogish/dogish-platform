@@ -26,12 +26,30 @@ type Human = {
   following_count: number | null
 }
 
+type Kit = {
+  id: string
+  title: string
+  type: string | null
+  is_private: boolean
+  is_system: boolean
+}
+
+const TABS = ['posts', 'kits', 'dogs'] as const
+type TabValue = typeof TABS[number]
+
 export default async function ProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { username } = await params
+  const { tab: tabParam = 'posts' } = await searchParams
+  const activeTab: TabValue = (TABS as readonly string[]).includes(tabParam)
+    ? (tabParam as TabValue)
+    : 'posts'
+
   const supabase = await createClient()
   const admin = createAdminClient()
 
@@ -81,14 +99,13 @@ export default async function ProfilePage({
 
   const { data: kitsRaw } = await admin
     .from('kit')
-    .select('id, title, type, is_private')
+    .select('id, title, type, is_private, is_system')
     .eq('owner_id', h.id)
-    .order('created_at', { ascending: false })
+    .order('is_system', { ascending: false })
+    .order('created_at', { ascending: true })
 
-  const kitList = ((kitsRaw ?? []) as { id: string; title: string; type: string | null; is_private: boolean }[])
+  const kitList = ((kitsRaw ?? []) as Kit[])
     .filter((k) => isOwnProfile || !k.is_private)
-
-  const showKitsSection = kitList.length > 0 || isOwnProfile
 
   const followerCount = h.follower_count ?? 0
 
@@ -96,14 +113,14 @@ export default async function ProfilePage({
     <div className="min-h-svh bg-white">
       <div className="max-w-[640px] mx-auto">
 
-        {/* Cover strip — pointer-events-none so it never intercepts clicks below */}
+        {/* Cover strip */}
         <div className="w-full pointer-events-none" style={{ height: 160, backgroundColor: '#EDE3D6' }} />
 
-        {/* Avatar row — -mt-10 pulls row up by 40px (half of 80px avatar height) */}
+        {/* Avatar row */}
         <div className="relative z-10 px-4 -mt-10">
           <div className="flex items-start gap-2">
 
-            {/* Human avatar (not a link) */}
+            {/* Human avatar */}
             <div className="flex flex-col items-center gap-1 shrink-0">
               <div
                 className="relative w-20 h-20 rounded-full border-[3px] border-white overflow-hidden bg-[#EDE3D6]"
@@ -217,83 +234,106 @@ export default async function ProfilePage({
           />
         </div>
 
-        <div className="border-t border-[#0F2240]/8" />
-
-        {/* Posts grid */}
-        <div className={`mt-6 px-4 ${showKitsSection ? 'pb-4' : 'pb-24'}`}>
-          <h2 className="text-[15px] font-semibold text-[#0F2240] mb-3">Posts</h2>
-          {postList.length > 0 ? (
-            <div className="grid grid-cols-3 gap-px">
-              {postList.map((post) => {
-                const img = post.images?.[0]
-                return (
-                  <Link key={post.id} href={`/posts/${post.id}`} className="group block">
-                    <div className="relative w-full aspect-[4/5] overflow-hidden bg-[#F7F3EE]">
-                      {img && (
-                        <Image
-                          src={img}
-                          alt=""
-                          fill
-                          className="object-cover group-hover:opacity-90 transition-opacity"
-                        />
-                      )}
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="text-center text-[14px] text-[#0F2240]/40 py-10">No posts yet.</p>
-          )}
+        {/* Tabs */}
+        <div className="border-t border-[#0F2240]/8 px-4">
+          <div className="flex gap-6">
+            {TABS.map((tab) => (
+              <Link
+                key={tab}
+                href={`/${username}?tab=${tab}`}
+                className="pb-3 pt-3 text-[14px] font-medium transition-colors relative capitalize"
+                style={{ color: activeTab === tab ? '#0F2240' : 'rgba(15,34,64,0.4)' }}
+              >
+                {tab}
+                {activeTab === tab && (
+                  <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0F2240] rounded-full" />
+                )}
+              </Link>
+            ))}
+          </div>
         </div>
 
-        {/* Kits section */}
-        {showKitsSection && (
-          <>
-            <div className="border-t border-[#0F2240]/8" />
-            <div className="px-4 pt-5 pb-24">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[15px] font-semibold text-[#0F2240]">Kits</h2>
-                {isOwnProfile && kitList.length > 0 && (
-                  <Link
-                    href="/kits/new"
-                    className="text-[13px] font-semibold px-3 py-1 rounded-full text-white transition-colors"
-                    style={{ backgroundColor: '#0F2240' }}
-                  >
-                    + New kit
-                  </Link>
-                )}
-              </div>
-              {kitList.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {kitList.map((kit) => (
-                    <Link
-                      key={kit.id}
-                      href={`/${username}/kits/${kit.id}`}
-                      className="group rounded-xl overflow-hidden border border-[#0F2240]/10 hover:border-[#0F2240]/25 transition-colors"
-                    >
-                      <div
-                        className="w-full flex items-center justify-center"
-                        style={{ aspectRatio: '16/9', backgroundColor: '#0F2240' }}
-                      >
-                        <span className="text-white/20 text-2xl font-bold select-none">
-                          {kit.title[0]?.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="px-3 py-2.5 bg-white">
-                        <p className="text-sm font-semibold text-[#0F2240] truncate">{kit.title}</p>
-                        {kit.type && (
-                          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/60 capitalize">
-                            {kit.type}
-                          </span>
+        {/* Tab content */}
+        {activeTab === 'posts' && (
+          <div className="px-4 pt-5 pb-24">
+            {postList.length > 0 ? (
+              <div className="grid grid-cols-3 gap-px -mx-4">
+                {postList.map((post) => {
+                  const img = post.images?.[0]
+                  return (
+                    <Link key={post.id} href={`/posts/${post.id}`} className="group block">
+                      <div className="relative w-full aspect-[4/5] overflow-hidden bg-[#F7F3EE]">
+                        {img && (
+                          <Image
+                            src={img}
+                            alt=""
+                            fill
+                            className="object-cover group-hover:opacity-90 transition-opacity"
+                          />
                         )}
                       </div>
                     </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <p className="text-[14px] text-[#0F2240]/40 mb-3">No kits yet.</p>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-center text-[14px] text-[#0F2240]/40 py-10">No posts yet.</p>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'kits' && (
+          <div className="px-4 pt-5 pb-24">
+            <div className="flex items-center justify-between mb-4">
+              <span />
+              {isOwnProfile && (
+                <Link
+                  href="/kits/new"
+                  className="text-[13px] font-semibold px-3 py-1 rounded-full text-white"
+                  style={{ backgroundColor: '#0F2240' }}
+                >
+                  + New kit
+                </Link>
+              )}
+            </div>
+            {kitList.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {kitList.map((kit) => (
+                  <Link
+                    key={kit.id}
+                    href={`/${username}/kits/${kit.id}`}
+                    className="group rounded-xl overflow-hidden border border-[#0F2240]/10 hover:border-[#0F2240]/25 transition-colors"
+                  >
+                    <div
+                      className="w-full flex items-center justify-center"
+                      style={{ aspectRatio: '16/9', backgroundColor: kit.is_system ? '#EDE3D6' : '#0F2240' }}
+                    >
+                      <span
+                        className="text-2xl font-bold select-none"
+                        style={{ color: kit.is_system ? 'rgba(15,34,64,0.3)' : 'rgba(255,255,255,0.2)' }}
+                      >
+                        {kit.title[0]?.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="px-3 py-2.5 bg-white">
+                      <p className="text-sm font-semibold text-[#0F2240] truncate">{kit.title}</p>
+                      {kit.is_system ? (
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/50">
+                          system
+                        </span>
+                      ) : kit.type ? (
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/60 capitalize">
+                          {kit.type}
+                        </span>
+                      ) : null}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-[14px] text-[#0F2240]/40 mb-3">No kits yet.</p>
+                {isOwnProfile && (
                   <Link
                     href="/kits/new"
                     className="text-sm font-medium px-4 py-1.5 rounded-full text-white"
@@ -301,14 +341,58 @@ export default async function ProfilePage({
                   >
                     Create your first kit
                   </Link>
-                </div>
-              )}
-            </div>
-          </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'dogs' && (
+          <div className="px-4 pt-5 pb-24">
+            {dogList.length > 0 ? (
+              <div className="grid grid-cols-3 gap-4">
+                {dogList.map((dog) => (
+                  <Link
+                    key={dog.id}
+                    href={`/${username}/${slugify(dog.name)}`}
+                    className="flex flex-col items-center gap-2 group"
+                  >
+                    <div
+                      className="relative w-20 h-20 rounded-full overflow-hidden bg-[#EDE3D6] ring-offset-2 group-hover:ring-2 group-hover:ring-[#0F2240] transition-all"
+                      style={{ boxShadow: '0 1px 6px rgba(15,34,64,0.12)' }}
+                    >
+                      {dog.avatar ? (
+                        <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-2xl font-bold text-[#0F2240]/40">
+                          {dog.name[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[13px] font-medium text-[#0F2240] text-center leading-tight">
+                      {dog.name}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="py-10 text-center">
+                <p className="text-[14px] text-[#0F2240]/40 mb-3">No dogs yet.</p>
+                {isOwnProfile && (
+                  <Link
+                    href="/dogs/new"
+                    className="text-sm font-medium px-4 py-1.5 rounded-full text-white"
+                    style={{ backgroundColor: '#0F2240' }}
+                  >
+                    Add a dog
+                  </Link>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
       </div>
-
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Search, PlusSquare, Bookmark, User } from 'lucide-react'
+import { Home, Film, PlusSquare, MessageCircle, User } from 'lucide-react'
 
 type Props = {
   username: string | null
@@ -13,9 +13,9 @@ export default function BottomNav({ username }: Props) {
 
   const items = [
     { href: '/home', icon: Home, label: 'Home' },
-    { href: '/explore', icon: Search, label: 'Explore' },
-    { href: '/posts/new', icon: PlusSquare, label: 'New post' },
-    { href: '/saved', icon: Bookmark, label: 'Saved' },
+    { href: '/reels', icon: Film, label: 'Reels' },
+    { href: '/posts/new', icon: PlusSquare, label: 'Post' },
+    { href: '/inbox', icon: MessageCircle, label: 'Inbox' },
     { href: username ? `/${username}` : '/onboarding/profile', icon: User, label: 'Profile' },
   ]
 
@@ -23,7 +23,7 @@ export default function BottomNav({ username }: Props) {
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#0F2240]/8">
       <div className="max-w-[640px] mx-auto flex items-center justify-around h-14 px-2">
         {items.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || (label === 'Explore' && pathname.startsWith('/explore')) || (label === 'Profile' && username && pathname === `/${username}`)
+          const active = pathname === href || (label === 'Reels' && pathname.startsWith('/reels')) || (label === 'Inbox' && pathname.startsWith('/inbox')) || (label === 'Profile' && username && pathname === `/${username}`)
           return (
             <Link
               key={href}

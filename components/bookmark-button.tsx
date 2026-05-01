@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Bookmark } from 'lucide-react'
-import { savePost, unsavePost } from '@/app/actions/saved-posts'
+import { savePostToKit, unsavePostFromKit } from '@/app/actions/saved-posts'
 import { cn } from '@/lib/utils'
 
 interface BookmarkButtonProps {
@@ -19,7 +19,7 @@ export function BookmarkButton({ postId, initialSaved, className }: BookmarkButt
     const next = !saved
     setSaved(next)
     startTransition(async () => {
-      const result = next ? await savePost(postId) : await unsavePost(postId)
+      const result = next ? await savePostToKit(postId) : await unsavePostFromKit(postId)
       if (result.error) setSaved(!next)
     })
   }

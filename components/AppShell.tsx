@@ -4,7 +4,8 @@ import BottomNav from '@/components/BottomNav'
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   let username: string | null = null
   if (user) {

@@ -1,93 +1,70 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
 
-export async function savePost(postId: string, folderId?: string) {
+async function getSavedKitId(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('kit')
+    .select('id')
+    .eq('owner_id', userId)
+    .eq('title', 'Saved')
+    .eq('is_system', true)
+    .limit(1)
+    .maybeSingle()
+  return data?.id ?? null
+}
+
+export async function savePostToKit(postId: string) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  const { data: { session } } = await supabase.auth.getSession()
+  const userId = session?.user?.id
+  if (!userId) return { error: 'Not authenticated' }
+
+  const kitId = await getSavedKitId(supabase, userId)
+  if (!kitId) return { error: 'Saved kit not found' }
 
   const { error } = await supabase
-    .from('saved_post')
-    .insert({ human_id: user.id, post_id: postId, folder_id: folderId ?? null })
+    .from('kit_items')
+    .insert({ pack_id: kitId, item_type: 'post', post_id: postId })
 
   if (error && error.code !== '23505') return { error: error.message }
-  revalidatePath('/saved')
   return { success: true }
 }
 
-export async function unsavePost(postId: string) {
+export async function unsavePostFromKit(postId: string) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
+  const { data: { session } } = await supabase.auth.getSession()
+  const userId = session?.user?.id
+  if (!userId) return { error: 'Not authenticated' }
+
+  const kitId = await getSavedKitId(supabase, userId)
+  if (!kitId) return { error: 'Saved kit not found' }
 
   const { error } = await supabase
-    .from('saved_post')
+    .from('kit_items')
     .delete()
-    .eq('human_id', user.id)
+    .eq('pack_id', kitId)
     .eq('post_id', postId)
 
   if (error) return { error: error.message }
-  revalidatePath('/saved')
   return { success: true }
 }
 
-export async function getSavedPostIds(): Promise<string[]> {
+export async function getSavedPostIds(postIds: string[]): Promise<string[]> {
+  if (postIds.length === 0) return []
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  const { data: { session } } = await supabase.auth.getSession()
+  const userId = session?.user?.id
+  if (!userId) return []
+
+  const kitId = await getSavedKitId(supabase, userId)
+  if (!kitId) return []
 
   const { data } = await supabase
-    .from('saved_post')
+    .from('kit_items')
     .select('post_id')
-    .eq('human_id', user.id)
+    .eq('pack_id', kitId)
+    .in('post_id', postIds)
 
-  return data?.map(r => r.post_id) ?? []
-}
-
-export async function createFolder(name: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const { data, error } = await supabase
-    .from('saved_folder')
-    .insert({ owner_id: user.id, name })
-    .select()
-    .single()
-
-  if (error) return { error: error.message }
-  revalidatePath('/saved')
-  return { folder: data }
-}
-
-export async function getFolders() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
-
-  const { data } = await supabase
-    .from('saved_folder')
-    .select('*')
-    .eq('owner_id', user.id)
-    .order('created_at', { ascending: true })
-
-  return data ?? []
-}
-
-export async function movePostToFolder(postId: string, folderId: string | null) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated' }
-
-  const { error } = await supabase
-    .from('saved_post')
-    .update({ folder_id: folderId })
-    .eq('human_id', user.id)
-    .eq('post_id', postId)
-
-  if (error) return { error: error.message }
-  revalidatePath('/saved')
-  return { success: true }
+  return (data ?? []).map((r) => r.post_id as string).filter(Boolean)
 }

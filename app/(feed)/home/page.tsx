@@ -101,12 +101,19 @@ export default async function FeedPage() {
   const savedPostIds = new Set<string>()
   if (posts.length > 0) {
     const postIds = posts.map((p) => p.id)
-    const [likedRows, savedRows] = await Promise.all([
+    const [likedRows, savedKitResult] = await Promise.all([
       supabase.from('like_').select('post_id').eq('human_id', user.id).in('post_id', postIds),
-      supabase.from('saved_post').select('post_id').eq('human_id', user.id).in('post_id', postIds),
+      supabase.from('kit').select('id').eq('owner_id', user.id).eq('title', 'Saved').eq('is_system', true).limit(1).maybeSingle(),
     ])
     for (const row of likedRows.data ?? []) likedPostIds.add(row.post_id)
-    for (const row of savedRows.data ?? []) savedPostIds.add(row.post_id)
+    if (savedKitResult.data?.id) {
+      const { data: savedItems } = await supabase
+        .from('kit_items')
+        .select('post_id')
+        .eq('pack_id', savedKitResult.data.id)
+        .in('post_id', postIds)
+      for (const row of savedItems ?? []) savedPostIds.add(row.post_id)
+    }
   }
 
   return (
@@ -118,7 +125,13 @@ export default async function FeedPage() {
           <div className="w-16" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/dogish-wordmark.svg" alt="Dogish" style={{ height: 26 }} />
-          <div className="w-16 flex justify-end">
+          <div className="w-16 flex justify-end items-center gap-2">
+            <Link href="/explore" aria-label="Explore" className="flex items-center justify-center text-[#0F2240]/50 hover:text-[#0F2240] transition-colors">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+              </svg>
+            </Link>
             <SignOutButton />
           </div>
         </div>
