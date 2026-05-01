@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useTransition } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { Repeat2 } from 'lucide-react'
 import { quickRepost, quoteRepost, undoRepost } from '@/app/actions/reposts'
@@ -91,7 +92,8 @@ export default function RepostDrawer({
       try {
         await quoteRepost(post.id, caption)
         onRepostedChange(true)
-        onRepostCountChange(1)
+        // Only increment if they weren't already reposted — upsert may have just updated the caption
+        if (!isReposted) onRepostCountChange(1)
       } catch {}
       onClose()
     })
@@ -102,16 +104,16 @@ export default function RepostDrawer({
   const image = post.images?.[0] ?? null
   const charsLeft = MAX_CHARS - caption.length
 
-  return (
+  const content = (
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/40"
+        className="fixed inset-0 z-[60] bg-black/40"
         onClick={onClose}
       />
 
       {/* Drawer */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-xl max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 z-[70] bg-white rounded-t-2xl shadow-xl max-w-lg mx-auto">
 
         {mode === 'options' ? (
           <>
@@ -237,4 +239,6 @@ export default function RepostDrawer({
       </div>
     </>
   )
+
+  return createPortal(content, document.body)
 }

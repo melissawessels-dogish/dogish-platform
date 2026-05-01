@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Heart, MessageCircle, Repeat2, Bookmark } from 'lucide-react'
+import { Heart, MessageCircle, Repeat2, Send, Bookmark } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { BookmarkButton } from '@/components/bookmark-button'
 import CommentDrawer, { type DrawerCurrentUser } from '@/components/comment-drawer'
@@ -41,7 +41,7 @@ type Props = {
   isLiked: boolean
   isSaved: boolean
   isReposted: boolean
-  currentUserId: string
+  currentUserId?: string
   currentUser?: DrawerCurrentUser | null
 }
 
@@ -63,7 +63,7 @@ export default function PostCard({
   isLiked: initialIsLiked,
   isSaved,
   isReposted: initialIsReposted,
-  currentUserId,
+  currentUserId = '',
   currentUser = null,
 }: Props) {
   const supabase = createClient()
@@ -82,7 +82,7 @@ export default function PostCard({
   const taggedDogs = post.post_dogs ?? []
 
   const handleLike = async () => {
-    if (pending) return
+    if (pending || !currentUserId) return
     const wasLiked = isLiked
     setIsLiked(!wasLiked)
     setLikeCount((c) => wasLiked ? c - 1 : c + 1)
@@ -212,6 +212,22 @@ export default function PostCard({
             <span className={`text-sm ${isReposted ? 'text-green-600' : 'text-[#0F2240]/60'}`}>
               {repostCount}
             </span>
+          </button>
+
+          <button
+            type="button"
+            aria-label="Share"
+            onClick={() => {
+              const url = `${window.location.origin}/posts/${post.id}`
+              if (navigator.share) {
+                navigator.share({ url }).catch(() => {})
+              } else {
+                navigator.clipboard.writeText(url).catch(() => {})
+              }
+            }}
+            className="flex items-center text-[#0F2240]/60 hover:text-[#0F2240] transition-colors"
+          >
+            <Send className="h-6 w-6" strokeWidth={1.8} />
           </button>
 
           <div className="flex items-center gap-1.5 ml-auto">

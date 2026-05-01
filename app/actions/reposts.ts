@@ -21,12 +21,13 @@ export async function quoteRepost(postId: string, caption: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { error } = await supabase.from('repost').insert({
-    reposter_id: user.id,
-    original_post_id: postId,
-    caption: caption.trim() || null,
-  })
-  if (error && error.code !== '23505') throw new Error(error.message)
+  // Upsert so that if a quick repost row already exists, we just add the caption.
+  // The repost_count trigger only fires on INSERT, so count stays correct either way.
+  const { error } = await supabase.from('repost').upsert(
+    { reposter_id: user.id, original_post_id: postId, caption: caption.trim() || null },
+    { onConflict: 'reposter_id,original_post_id' }
+  )
+  if (error) throw new Error(error.message)
   revalidatePath('/home')
 }
 

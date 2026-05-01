@@ -3,11 +3,19 @@ export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { Repeat2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
 import ProfileStats from '@/components/profile-stats'
+import PostCard, { type PostCardPost } from '@/components/PostCard'
 import { slugify } from '@/lib/slugify'
+
+const POST_SELECT = `
+  id, body, images, created_at, like_count, comment_count, repost_count, save_count,
+  author:human!author_id ( id, display_name, username, avatar ),
+  post_dogs ( dog ( id, name, avatar ) )
+`
 
 type Dog = {
   id: string
@@ -88,14 +96,63 @@ export default async function ProfilePage({
 
   const dogList: Dog[] = (dogs ?? []) as Dog[]
 
-  const { data: posts } = await admin
-    .from('post')
-    .select('id, images')
-    .eq('author_id', h.id)
-    .eq('is_private', false)
-    .order('created_at', { ascending: false })
+  type Reposter = { id: string; username: string | null; display_name: string | null }
+  type FeedItem =
+    | { type: 'post'; sortAt: string; post: PostCardPost }
+    | { type: 'repost'; sortAt: string; repostId: string; reposter: Reposter; caption: string | null; post: PostCardPost }
 
-  const postList = (posts ?? []) as { id: string; images: string[] | null }[]
+  type RawRepost = {
+    id: string
+    caption: string | null
+    created_at: string
+    reposter: Reposter
+    post: PostCardPost
+  }
+
+  const [postsRes, repostsRes] = await Promise.all([
+    admin.from('post').select(POST_SELECT)
+      .eq('author_id', h.id).eq('is_private', false)
+      .order('created_at', { ascending: false }).limit(60),
+    admin.from('repost')
+      .select(`id, caption, created_at, reposter:human!reposter_id(id, username, display_name), post:post!original_post_id(${POST_SELECT})`)
+      .eq('reposter_id', h.id)
+      .order('created_at', { ascending: false }).limit(30),
+  ])
+
+  const ownPosts = (postsRes.data ?? []) as unknown as PostCardPost[]
+  const repostRows = (repostsRes.data ?? []) as unknown as RawRepost[]
+
+  const feedItems: FeedItem[] = [
+    ...ownPosts.map((p): FeedItem => ({ type: 'post', sortAt: p.created_at, post: p })),
+    ...repostRows.filter((r) => r.post != null).map((r): FeedItem => ({
+      type: 'repost', sortAt: r.created_at, repostId: r.id,
+      reposter: r.reposter, caption: r.caption, post: r.post,
+    })),
+  ].sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime())
+
+  // Viewer liked/saved/reposted state
+  const allPostIds = [...new Set(feedItems.map((item) => item.post.id))]
+  const likedPostIds = new Set<string>()
+  const savedPostIds = new Set<string>()
+  const repostedPostIds = new Set<string>()
+
+  if (userId && allPostIds.length > 0) {
+    const [likedRows, savedKitResult, repostRows2] = await Promise.all([
+      supabase.from('like_').select('post_id').eq('human_id', userId).in('post_id', allPostIds),
+      supabase.from('kit').select('id').eq('owner_id', userId).eq('title', 'Saved').limit(1).maybeSingle(),
+      supabase.from('repost').select('original_post_id').eq('reposter_id', userId).in('original_post_id', allPostIds),
+    ])
+    for (const row of likedRows.data ?? []) likedPostIds.add(row.post_id)
+    for (const row of repostRows2.data ?? []) repostedPostIds.add(row.original_post_id as string)
+    if (savedKitResult.data?.id) {
+      const { data: savedItems } = await supabase
+        .from('kit_items').select('post_id')
+        .eq('pack_id', savedKitResult.data.id).in('post_id', allPostIds)
+      for (const row of savedItems ?? []) savedPostIds.add(row.post_id)
+    }
+  }
+
+  const postList = ownPosts
 
   const { data: kitsRaw } = await admin
     .from('kit')
@@ -271,24 +328,35 @@ export default async function ProfilePage({
 
         {/* Tab content */}
         {activeTab === 'posts' && (
-          <div className="px-4 pt-5 pb-24">
-            {postList.length > 0 ? (
-              <div className="grid grid-cols-3 gap-px -mx-4">
-                {postList.map((post) => {
-                  const img = post.images?.[0]
+          <div className="pt-3 pb-24">
+            {feedItems.length > 0 ? (
+              <div className="flex flex-col">
+                {feedItems.map((item) => {
+                  const commonProps = {
+                    post: item.post,
+                    isLiked: likedPostIds.has(item.post.id),
+                    isSaved: savedPostIds.has(item.post.id),
+                    isReposted: repostedPostIds.has(item.post.id),
+                    currentUserId: userId ?? undefined,
+                  }
+                  if (item.type === 'post') {
+                    return <PostCard key={item.post.id} {...commonProps} />
+                  }
                   return (
-                    <Link key={post.id} href={`/posts/${post.id}`} className="group block">
-                      <div className="relative w-full aspect-[4/5] overflow-hidden bg-[#F7F3EE]">
-                        {img && (
-                          <Image
-                            src={img}
-                            alt=""
-                            fill
-                            className="object-cover group-hover:opacity-90 transition-opacity"
-                          />
-                        )}
+                    <div key={item.repostId}>
+                      <div className="flex items-center gap-1.5 px-4 pt-3 pb-0">
+                        <Repeat2 className="h-3.5 w-3.5 text-[#0F2240]/40 shrink-0" />
+                        <span className="text-[12px] text-[#0F2240]/40 font-medium">
+                          {item.reposter.display_name ?? item.reposter.username} reposted
+                        </span>
                       </div>
-                    </Link>
+                      {item.caption && (
+                        <div className="px-4 pt-2 pb-1">
+                          <p className="text-[14px] text-[#0F2240] leading-snug">{item.caption}</p>
+                        </div>
+                      )}
+                      <PostCard key={`${item.repostId}-post`} {...commonProps} />
+                    </div>
                   )
                 })}
               </div>
