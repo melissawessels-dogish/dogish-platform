@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   Field,
@@ -18,7 +19,14 @@ import {
 } from '@/app/actions/auth'
 
 export function SignupForm() {
+  const router = useRouter()
   const [state, action, pending] = useActionState(signUp, null)
+
+  useEffect(() => {
+    if (state?.redirectTo) {
+      router.push(state.redirectTo)
+    }
+  }, [state, router])
 
   if (state?.message) {
     return (

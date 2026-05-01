@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 export type AuthState = {
   error?: string
   message?: string
+  redirectTo?: string
 } | null
 
 async function getOrigin(): Promise<string> {
@@ -28,7 +29,9 @@ export async function signIn(prevState: AuthState, formData: FormData): Promise<
     return { error: error.message }
   }
 
-  redirect('/home')
+  // Do not call redirect() here — it races past the Set-Cookie write.
+  // Return a redirect target and let the client navigate after cookies are set.
+  return { redirectTo: '/home' }
 }
 
 export async function signUp(prevState: AuthState, formData: FormData): Promise<AuthState> {
@@ -43,9 +46,10 @@ export async function signUp(prevState: AuthState, formData: FormData): Promise<
     return { error: error.message }
   }
 
-  // Session is immediately active — email confirmation is disabled
+  // Session is immediately active — email confirmation is disabled.
+  // Return redirect target so the client navigates after cookies are set.
   if (data.session) {
-    redirect('/onboarding/profile')
+    return { redirectTo: '/onboarding/profile' }
   }
 
   return { message: 'Check your email for a confirmation link.' }
