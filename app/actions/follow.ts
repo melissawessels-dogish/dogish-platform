@@ -83,3 +83,32 @@ export async function unfollowDog(targetDogId: string) {
 
   revalidatePath('/', 'layout')
 }
+
+export async function followBreed(targetBreedId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase.from('follow').insert({
+    follower_id: user.id,
+    target_type: 'breed',
+    target_breed_id: targetBreedId,
+  })
+  if (error && error.code !== '23505') throw new Error(error.message)
+
+  revalidatePath('/', 'layout')
+}
+
+export async function unfollowBreed(targetBreedId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase.from('follow')
+    .delete()
+    .eq('follower_id', user.id)
+    .eq('target_breed_id', targetBreedId)
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/', 'layout')
+}

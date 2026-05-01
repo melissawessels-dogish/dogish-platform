@@ -243,8 +243,7 @@ export default async function ProfilePage({
 
           {/* Stats */}
           <ProfileStats
-            profileUserId={h.id}
-            currentUserId={userId}
+            profileUsername={username}
             postCount={postList.length}
             followerCount={followerCount}
             followingCount={h.following_count ?? 0}
