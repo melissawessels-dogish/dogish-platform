@@ -15,9 +15,9 @@ CREATE POLICY "repost: read all" ON repost FOR SELECT USING (true);
 CREATE POLICY "repost: insert own" ON repost FOR INSERT WITH CHECK (reposter_id = auth.uid());
 CREATE POLICY "repost: delete own" ON repost FOR DELETE USING (reposter_id = auth.uid());
 
--- Repost count trigger
+-- Repost count trigger (SECURITY DEFINER so it runs as owner, bypassing RLS on post)
 CREATE OR REPLACE FUNCTION update_post_repost_count()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
   IF TG_OP = 'INSERT' THEN
     UPDATE post SET repost_count = repost_count + 1 WHERE id = NEW.original_post_id;
@@ -30,4 +30,4 @@ $$;
 
 CREATE TRIGGER repost_count_trigger
   AFTER INSERT OR DELETE ON repost
-  FOR each ROW EXECUTE FUNCTION update_post_repost_count();
+  FOR EACH ROW EXECUTE FUNCTION update_post_repost_count();

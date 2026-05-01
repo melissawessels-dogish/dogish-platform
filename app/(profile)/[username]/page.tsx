@@ -8,14 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
 import ProfileStats from '@/components/profile-stats'
-import PostCard, { type PostCardPost } from '@/components/PostCard'
 import { slugify } from '@/lib/slugify'
-
-const POST_SELECT = `
-  id, body, images, created_at, like_count, comment_count, repost_count, save_count,
-  author:human!author_id ( id, display_name, username, avatar ),
-  post_dogs ( dog ( id, name, avatar ) )
-`
 
 type Dog = {
   id: string
@@ -96,63 +89,31 @@ export default async function ProfilePage({
 
   const dogList: Dog[] = (dogs ?? []) as Dog[]
 
-  type Reposter = { id: string; username: string | null; display_name: string | null }
-  type FeedItem =
-    | { type: 'post'; sortAt: string; post: PostCardPost }
-    | { type: 'repost'; sortAt: string; repostId: string; reposter: Reposter; caption: string | null; post: PostCardPost }
-
-  type RawRepost = {
-    id: string
-    caption: string | null
-    created_at: string
-    reposter: Reposter
-    post: PostCardPost
-  }
+  type OwnPost = { id: string; images: string[] | null; created_at: string }
+  type RepostRow = { id: string; created_at: string; post: { id: string; images: string[] | null } | null }
+  type GridItem = { key: string; postId: string; image: string | null; sortAt: string; isRepost: boolean }
 
   const [postsRes, repostsRes] = await Promise.all([
-    admin.from('post').select(POST_SELECT)
+    admin.from('post').select('id, images, created_at')
       .eq('author_id', h.id).eq('is_private', false)
       .order('created_at', { ascending: false }).limit(60),
     admin.from('repost')
-      .select(`id, caption, created_at, reposter:human!reposter_id(id, username, display_name), post:post!original_post_id(${POST_SELECT})`)
+      .select('id, created_at, post:post!original_post_id(id, images)')
       .eq('reposter_id', h.id)
       .order('created_at', { ascending: false }).limit(30),
   ])
 
-  const ownPosts = (postsRes.data ?? []) as unknown as PostCardPost[]
-  const repostRows = (repostsRes.data ?? []) as unknown as RawRepost[]
+  const ownPosts = (postsRes.data ?? []) as OwnPost[]
+  const repostRows = (repostsRes.data ?? []) as unknown as RepostRow[]
 
-  const feedItems: FeedItem[] = [
-    ...ownPosts.map((p): FeedItem => ({ type: 'post', sortAt: p.created_at, post: p })),
-    ...repostRows.filter((r) => r.post != null).map((r): FeedItem => ({
-      type: 'repost', sortAt: r.created_at, repostId: r.id,
-      reposter: r.reposter, caption: r.caption, post: r.post,
+  const gridItems: GridItem[] = [
+    ...ownPosts.map((p): GridItem => ({
+      key: p.id, postId: p.id, image: p.images?.[0] ?? null, sortAt: p.created_at, isRepost: false,
+    })),
+    ...repostRows.filter((r) => r.post != null).map((r): GridItem => ({
+      key: r.id, postId: r.post!.id, image: r.post!.images?.[0] ?? null, sortAt: r.created_at, isRepost: true,
     })),
   ].sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime())
-
-  // Viewer liked/saved/reposted state
-  const allPostIds = [...new Set(feedItems.map((item) => item.post.id))]
-  const likedPostIds = new Set<string>()
-  const savedPostIds = new Set<string>()
-  const repostedPostIds = new Set<string>()
-
-  if (userId && allPostIds.length > 0) {
-    const [likedRows, savedKitResult, repostRows2] = await Promise.all([
-      supabase.from('like_').select('post_id').eq('human_id', userId).in('post_id', allPostIds),
-      supabase.from('kit').select('id').eq('owner_id', userId).eq('title', 'Saved').limit(1).maybeSingle(),
-      supabase.from('repost').select('original_post_id').eq('reposter_id', userId).in('original_post_id', allPostIds),
-    ])
-    for (const row of likedRows.data ?? []) likedPostIds.add(row.post_id)
-    for (const row of repostRows2.data ?? []) repostedPostIds.add(row.original_post_id as string)
-    if (savedKitResult.data?.id) {
-      const { data: savedItems } = await supabase
-        .from('kit_items').select('post_id')
-        .eq('pack_id', savedKitResult.data.id).in('post_id', allPostIds)
-      for (const row of savedItems ?? []) savedPostIds.add(row.post_id)
-    }
-  }
-
-  const postList = ownPosts
 
   const { data: kitsRaw } = await admin
     .from('kit')
@@ -301,7 +262,7 @@ export default async function ProfilePage({
           {/* Stats */}
           <ProfileStats
             profileUsername={username}
-            postCount={postList.length}
+            postCount={ownPosts.length}
             followerCount={followerCount}
             followingCount={h.following_count ?? 0}
           />
@@ -328,37 +289,33 @@ export default async function ProfilePage({
 
         {/* Tab content */}
         {activeTab === 'posts' && (
-          <div className="pt-3 pb-24">
-            {feedItems.length > 0 ? (
-              <div className="flex flex-col">
-                {feedItems.map((item) => {
-                  const commonProps = {
-                    post: item.post,
-                    isLiked: likedPostIds.has(item.post.id),
-                    isSaved: savedPostIds.has(item.post.id),
-                    isReposted: repostedPostIds.has(item.post.id),
-                    currentUserId: userId ?? undefined,
-                  }
-                  if (item.type === 'post') {
-                    return <PostCard key={item.post.id} {...commonProps} />
-                  }
-                  return (
-                    <div key={item.repostId}>
-                      <div className="flex items-center gap-1.5 px-4 pt-3 pb-0">
-                        <Repeat2 className="h-3.5 w-3.5 text-[#0F2240]/40 shrink-0" />
-                        <span className="text-[12px] text-[#0F2240]/40 font-medium">
-                          {item.reposter.display_name ?? item.reposter.username} reposted
-                        </span>
+          <div className="pb-24">
+            {gridItems.length > 0 ? (
+              <div className="grid grid-cols-3 gap-0.5">
+                {gridItems.map((item) => (
+                  <Link
+                    key={item.key}
+                    href={`/posts/${item.postId}`}
+                    className="relative aspect-[4/5] block bg-[#EDE3D6]"
+                  >
+                    {item.image ? (
+                      <Image src={item.image} alt="" fill className="object-cover" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(15,34,64,0.2)" strokeWidth="1.5">
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <polyline points="21 15 16 10 5 21" />
+                        </svg>
                       </div>
-                      {item.caption && (
-                        <div className="px-4 pt-2 pb-1">
-                          <p className="text-[14px] text-[#0F2240] leading-snug">{item.caption}</p>
-                        </div>
-                      )}
-                      <PostCard key={`${item.repostId}-post`} {...commonProps} />
-                    </div>
-                  )
-                })}
+                    )}
+                    {item.isRepost && (
+                      <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5">
+                        <Repeat2 className="h-3 w-3 text-white" />
+                      </div>
+                    )}
+                  </Link>
+                ))}
               </div>
             ) : (
               <p className="text-center text-[14px] text-[#0F2240]/40 py-10">No posts yet.</p>

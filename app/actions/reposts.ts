@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export async function quickRepost(postId: string) {
@@ -18,16 +19,36 @@ export async function quickRepost(postId: string) {
 
 export async function quoteRepost(postId: string, caption: string) {
   const supabase = await createClient()
+  const admin = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  // Upsert so that if a quick repost row already exists, we just add the caption.
-  // The repost_count trigger only fires on INSERT, so count stays correct either way.
+  const trimmedCaption = caption.trim() || null
+
+  // Check before upsert so we can tell if this is a new insert or an update
+  const { data: existing } = await supabase
+    .from('repost')
+    .select('id')
+    .eq('reposter_id', user.id)
+    .eq('original_post_id', postId)
+    .maybeSingle()
+
   const { error } = await supabase.from('repost').upsert(
-    { reposter_id: user.id, original_post_id: postId, caption: caption.trim() || null },
+    { reposter_id: user.id, original_post_id: postId, caption: trimmedCaption },
     { onConflict: 'reposter_id,original_post_id' }
   )
   if (error) throw new Error(error.message)
+
+  // Trigger only fires on INSERT; manually increment when this is a new row
+  if (!existing) {
+    const { data: postRow } = await admin.from('post').select('repost_count').eq('id', postId).single()
+    if (postRow) {
+      await admin.from('post')
+        .update({ repost_count: (postRow.repost_count ?? 0) + 1 })
+        .eq('id', postId)
+    }
+  }
+
   revalidatePath('/home')
 }
 

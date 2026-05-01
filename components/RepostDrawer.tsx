@@ -92,7 +92,6 @@ export default function RepostDrawer({
       try {
         await quoteRepost(post.id, caption)
         onRepostedChange(true)
-        // Only increment if they weren't already reposted — upsert may have just updated the caption
         if (!isReposted) onRepostCountChange(1)
       } catch {}
       onClose()
