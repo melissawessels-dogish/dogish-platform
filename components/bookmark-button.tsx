@@ -20,6 +20,7 @@ export function BookmarkButton({ postId, initialSaved, className }: BookmarkButt
     setSaved(next)
     startTransition(async () => {
       const result = next ? await savePostToKit(postId) : await unsavePostFromKit(postId)
+      console.log('[BookmarkButton] action result:', result)
       if (result.error) setSaved(!next)
     })
   }

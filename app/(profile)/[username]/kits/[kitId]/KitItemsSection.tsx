@@ -41,6 +41,7 @@ type Props = {
   initialItems: KitItem[]
   kitType: string | null
   userId: string | null
+  isSystem?: boolean
 }
 
 const PLACE_CATEGORIES = ['Park', 'Trail', 'Restaurant', 'Vet', 'Groomer', 'Hotel', 'Other']
@@ -55,7 +56,7 @@ function addButtonLabel(kitType: string | null): string {
   return '+ Add an item'
 }
 
-export default function KitItemsSection({ kitId, isOwner, initialItems, kitType, userId }: Props) {
+export default function KitItemsSection({ kitId, isOwner, initialItems, kitType, userId, isSystem = false }: Props) {
   const supabase = createClient()
   const [items, setItems] = useState<KitItem[]>(initialItems)
   const [showAddPanel, setShowAddPanel] = useState(false)
@@ -288,6 +289,9 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
     if (!error) setItems((prev) => prev.filter((i) => i.id !== id))
   }
 
+  const postItems = items.filter((i) => i.item_type === 'post')
+  const nonPostItems = items.filter((i) => i.item_type !== 'post')
+
   return (
     <div>
       {/* Header */}
@@ -296,7 +300,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
           <span className="font-semibold text-[#0F2240]">{items.length}</span>{' '}
           {items.length === 1 ? 'item' : 'items'}
         </p>
-        {isOwner && (
+        {isOwner && !isSystem && (
           <button
             type="button"
             onClick={() => { setShowAddPanel((v) => !v); if (showAddPanel) closePanel() }}
@@ -308,7 +312,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
       </div>
 
       {/* Add panel */}
-      {showAddPanel && isOwner && (
+      {showAddPanel && isOwner && !isSystem && (
         <div className="mb-5 rounded-xl border border-[#0F2240]/10 overflow-hidden bg-[#F7F3EE]">
           {(() => {
             const isPlaceFirst = PLACE_FIRST_TYPES.includes(kitType?.toLowerCase() ?? '')
@@ -530,40 +534,43 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
         </div>
       )}
 
-      {/* Items list */}
-      {items.length > 0 ? (
+      {/* Posts grid */}
+      {postItems.length > 0 && (
+        <div className="grid grid-cols-3 gap-px -mx-4 mb-5">
+          {postItems.map((item) => (
+            <Link key={item.id} href={`/posts/${item.post_id}`} className="group block">
+              <div className="relative w-full aspect-[4/5] overflow-hidden bg-[#F7F3EE]">
+                {item.post?.images?.[0] && (
+                  <Image
+                    src={item.post.images[0]}
+                    alt=""
+                    fill
+                    className="object-cover group-hover:opacity-90 transition-opacity"
+                  />
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Products / places list */}
+      {nonPostItems.length > 0 && (
         <div className="flex flex-col gap-3">
-          {items.map((item) => {
-            const isPost = item.item_type === 'post'
+          {nonPostItems.map((item) => {
             const isPlace = item.item_type === 'place'
-
-            const displayName = isPost
-              ? (item.post?.body || '')
-              : isPlace
-              ? (item.place?.name ?? '')
-              : (item.product?.name ?? '')
-
+            const displayName = isPlace ? (item.place?.name ?? '') : (item.product?.name ?? '')
             const displaySub = isPlace
               ? ([item.place?.city, item.place?.state].filter(Boolean).join(', ') || null)
               : (item.product?.brand ?? null)
-
-            const displayUrl = !isPost && !isPlace ? (item.product?.affiliate_url ?? null) : null
+            const displayUrl = !isPlace ? (item.product?.affiliate_url ?? null) : null
 
             return (
               <div
                 key={item.id}
                 className="flex items-center gap-3 p-3 rounded-xl border border-[#0F2240]/10 bg-white group"
               >
-                {/* Visual */}
-                {isPost ? (
-                  <Link href={`/posts/${item.post_id}`} className="shrink-0">
-                    <div className="relative w-10 rounded-lg overflow-hidden bg-[#EDE3D6]" style={{ aspectRatio: '4/5' }}>
-                      {item.post?.images?.[0] && (
-                        <Image src={item.post.images[0]} alt="" fill className="object-cover" />
-                      )}
-                    </div>
-                  </Link>
-                ) : isPlace ? (
+                {isPlace ? (
                   <div className="w-10 h-10 rounded-lg bg-[#EDE3D6] flex items-center justify-center shrink-0">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="1.5" opacity="0.4">
                       <path d="M20 10c0 6-8 13-8 13s-8-7-8-13a8 8 0 0 1 16 0z" />
@@ -579,39 +586,23 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
                     </svg>
                   </div>
                 )}
-
-                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  {isPost ? null : (
-                    <>
-                      <p className="text-sm font-medium text-[#0F2240] truncate">{displayName}</p>
-                      {displaySub && (
-                        <p className="text-xs text-[#0F2240]/50 mt-0.5">{displaySub}</p>
-                      )}
-                      {displayUrl && (
-                        <a
-                          href={displayUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-[#0F2240]/40 hover:text-[#0F2240] underline underline-offset-2 mt-0.5 block truncate"
-                        >
-                          {displayUrl.replace(/^https?:\/\//, '')}
-                        </a>
-                      )}
-                    </>
+                  <p className="text-sm font-medium text-[#0F2240] truncate">{displayName}</p>
+                  {displaySub && <p className="text-xs text-[#0F2240]/50 mt-0.5">{displaySub}</p>}
+                  {displayUrl && (
+                    <a
+                      href={displayUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-[#0F2240]/40 hover:text-[#0F2240] underline underline-offset-2 mt-0.5 block truncate"
+                    >
+                      {displayUrl.replace(/^https?:\/\//, '')}
+                    </a>
                   )}
                 </div>
-
-                {/* Category tag */}
-                {!isPost && (
-                  <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/60 capitalize">
-                    {isPlace
-                      ? (item.place?.category ?? 'place')
-                      : 'product'}
-                  </span>
-                )}
-
-                {/* Remove (owner) */}
+                <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/60 capitalize">
+                  {isPlace ? (item.place?.category ?? 'place') : 'product'}
+                </span>
                 {isOwner && (
                   <button
                     type="button"
@@ -628,10 +619,13 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
             )
           })}
         </div>
-      ) : (
+      )}
+
+      {/* Empty state */}
+      {items.length === 0 && (
         <div className="py-12 text-center">
           <p className="text-sm text-[#0F2240]/40">
-            {isOwner ? 'Add your first item.' : 'This kit is empty.'}
+            {isSystem ? 'Bookmark posts to save them here.' : isOwner ? 'Add your first item.' : 'This kit is empty.'}
           </p>
         </div>
       )}

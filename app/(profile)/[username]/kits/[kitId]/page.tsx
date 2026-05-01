@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { notFound, redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -14,6 +16,7 @@ type Kit = {
   description: string | null
   cover_image: string | null
   is_private: boolean
+  is_system: boolean
   owner_id: string
 }
 
@@ -41,7 +44,7 @@ export default async function KitDetailPage({
 
   const { data: kitRaw } = await admin
     .from('kit')
-    .select('id, title, type, description, cover_image, is_private, owner_id')
+    .select('id, title, type, description, cover_image, is_private, is_system, owner_id')
     .eq('id', kitId)
     .maybeSingle()
 
@@ -59,8 +62,8 @@ export default async function KitDetailPage({
 
   if (owner.username?.toLowerCase() !== username.toLowerCase()) notFound()
 
-  const { data: { session } } = await supabase.auth.getSession()
-  const userId = session?.user?.id ?? null
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id ?? null
   const isOwner = userId === kit.owner_id
 
   if (kit.is_private && !isOwner) redirect('/feed')
@@ -77,7 +80,7 @@ export default async function KitDetailPage({
   const { data: itemsRaw } = await admin
     .from('kit_items')
     .select('id, pack_id, item_type, position, note, added_at, product_id, place_id, post_id, product:product_id(id, name, brand, affiliate_url, category), place:place_id(id, name, address, city, state, category), post:post_id(id, images, body)')
-    .eq('kit_id', kitId)
+    .eq('pack_id', kitId)
     .order('position', { ascending: true })
 
   const items = (itemsRaw ?? []) as unknown as KitItem[]
@@ -177,6 +180,7 @@ export default async function KitDetailPage({
             initialItems={items}
             kitType={kit.type}
             userId={userId}
+            isSystem={kit.is_system}
           />
 
           {/* Delete kit */}

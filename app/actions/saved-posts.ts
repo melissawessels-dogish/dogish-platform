@@ -3,15 +3,28 @@
 import { createClient } from '@/lib/supabase/server'
 
 async function getSavedKitId(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<string | null> {
-  const { data } = await supabase
+  // Look up by owner + title only — avoids dependency on is_system column existing
+  const { data, error } = await supabase
     .from('kit')
     .select('id')
     .eq('owner_id', userId)
     .eq('title', 'Saved')
-    .eq('is_system', true)
     .limit(1)
     .maybeSingle()
-  return data?.id ?? null
+
+  if (error) console.error('[getSavedKitId] lookup error:', error.message)
+  if (data?.id) return data.id
+
+  // Kit doesn't exist yet — create it on the fly
+  console.log('[getSavedKitId] Saved kit not found for user', userId, '— creating')
+  const { data: newKit, error: insertError } = await supabase
+    .from('kit')
+    .insert({ owner_id: userId, title: 'Saved', description: 'Posts you have saved', is_private: true })
+    .select('id')
+    .single()
+
+  if (insertError) console.error('[getSavedKitId] insert error:', insertError.message)
+  return newKit?.id ?? null
 }
 
 export async function savePostToKit(postId: string) {
@@ -21,13 +34,23 @@ export async function savePostToKit(postId: string) {
   if (!userId) return { error: 'Not authenticated' }
 
   const kitId = await getSavedKitId(supabase, userId)
-  if (!kitId) return { error: 'Saved kit not found' }
+  if (!kitId) {
+    console.error('[savePostToKit] Could not find or create Saved kit for user', userId)
+    return { error: 'Saved kit not found' }
+  }
 
-  const { error } = await supabase
+  console.log('[savePostToKit] userId:', userId, '| kitId:', kitId, '| postId:', postId)
+  const { data: insertData, error } = await supabase
     .from('kit_items')
     .insert({ pack_id: kitId, item_type: 'post', post_id: postId })
+    .select()
 
-  if (error && error.code !== '23505') return { error: error.message }
+  console.log('[savePostToKit] insert result — data:', insertData, '| error:', error)
+
+  if (error) {
+    if (error.code === '23505') return { success: true } // already saved
+    return { error: error.message }
+  }
   return { success: true }
 }
 
