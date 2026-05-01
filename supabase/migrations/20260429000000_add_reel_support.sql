@@ -1,0 +1,3 @@
+ALTER TYPE post_type ADD VALUE IF NOT EXISTS 'reel';
+
+ALTER TABLE post ADD COLUMN IF NOT EXISTS video_url text;
