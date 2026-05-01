@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { slugify } from '@/lib/slugify'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -312,18 +313,16 @@ export default function EditDogPage() {
         .maybeSingle()
       if (!owner) { router.replace('/'); return }
 
-      // Find dog
+      // Find dog by matching slug against all owner's dogs (dogname param is a slug)
       const { data: dogRows, error: dogFetchError } = await supabase
         .from('dog')
         .select(`id, name, avatar, bio, size, sex, birthday, personality_tags, allergies, diet, mix_description, is_private, weight_lbs, is_fixed, energy_level, activities, good_with, health_conditions, vet_name, has_insurance, insurance_provider, location, food_brand, owner_id,
           dog_breeds(is_primary, breed:breed_id(id, name))`)
         .eq('owner_id', owner.id)
-        .ilike('name', dogname)
-        .limit(1)
 
       if (dogFetchError) throw new Error(dogFetchError.message)
 
-      const dog = dogRows?.[0] as {
+      const dog = (dogRows ?? []).find((d) => slugify(d.name) === dogname) as {
         id: string; name: string; avatar: string | null; bio: string | null
         size: string | null; sex: string; birthday: string | null
         personality_tags: string[] | null; allergies: string[] | null; diet: string[] | null
@@ -467,7 +466,7 @@ export default function EditDogPage() {
         if (breedError) throw breedError
       }
 
-      router.push(`/${username}/${form.name.trim().toLowerCase()}`)
+      router.push(`/${username}/${slugify(form.name.trim())}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setSubmitting(false)
