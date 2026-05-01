@@ -272,6 +272,8 @@ export default function EditDogPage() {
   const [loaded, setLoaded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const [form, setForm] = useState<FormData>({
     name: '',
@@ -411,6 +413,19 @@ export default function EditDogPage() {
     const remaining = form.breeds.filter((b) => b.id !== breedId)
     if (remaining.length > 0) remaining[0].is_primary = true
     update({ breeds: remaining })
+  }
+
+  const handleDelete = async () => {
+    if (!dogId) return
+    setDeleting(true)
+    const { error: deleteError } = await supabase.from('dog').delete().eq('id', dogId)
+    if (deleteError) {
+      setError(deleteError.message)
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+      return
+    }
+    router.push(`/${username}`)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -819,6 +834,43 @@ export default function EditDogPage() {
           </Button>
 
         </form>
+
+        {/* Delete dog */}
+        <div className="mt-10 pt-6 border-t border-[#0F2240]/8">
+          {!showDeleteConfirm ? (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="text-sm text-red-500 hover:text-red-700 transition-colors"
+            >
+              Delete {form.name || 'dog'}
+            </button>
+          ) : (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 flex flex-col gap-3">
+              <p className="text-sm font-medium text-red-700">
+                Permanently delete {form.name}? This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="flex-1 py-2 rounded-lg border border-[#0F2240]/20 text-sm font-medium text-[#0F2240] hover:bg-[#F7F3EE] transition-colors disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-40"
+                >
+                  {deleting ? 'Deleting…' : 'Yes, delete'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

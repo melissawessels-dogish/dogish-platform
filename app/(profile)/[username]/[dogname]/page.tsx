@@ -100,17 +100,6 @@ export default async function DogProfilePage({
     isFollowingDog = !!followRow
   }
 
-  const { data: kitDogsRaw } = await admin
-    .from('kit_dogs')
-    .select('kit:kit_id(id, title, type, is_private, owner_id)')
-    .eq('dog_id', d.id)
-
-  type KitCard = { id: string; title: string; type: string | null; is_private: boolean; owner_id: string }
-  const kitList = (kitDogsRaw ?? [])
-    .map((row) => row.kit as KitCard | null)
-    .filter((k): k is KitCard => k !== null)
-    .filter((k) => isOwnDog || !k.is_private)
-
   const { data: postDogs } = await admin
     .from('post_dogs')
     .select('post:post_id ( id, images, created_at, is_private )')
@@ -266,43 +255,6 @@ export default async function DogProfilePage({
             </div>
           ) : (
             <p className="text-center text-sm text-[#0F2240]/40 py-8">No posts yet.</p>
-          )}
-        </div>
-
-        <div className="border-t border-[#0F2240]/8" />
-
-        {/* Kits section */}
-        <div className="px-4 py-5 pb-24">
-          <h2 className="text-base font-bold text-[#0F2240] mb-4">Kits</h2>
-          {kitList.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
-              {kitList.map((kit) => (
-                <Link
-                  key={kit.id}
-                  href={`/${username}/kits/${kit.id}`}
-                  className="group rounded-xl overflow-hidden border border-[#0F2240]/10 hover:border-[#0F2240]/25 transition-colors"
-                >
-                  <div
-                    className="w-full flex items-center justify-center"
-                    style={{ aspectRatio: '16/9', backgroundColor: '#0F2240' }}
-                  >
-                    <span className="text-white/20 text-2xl font-bold select-none">
-                      {kit.title[0]?.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="px-3 py-2.5 bg-white">
-                    <p className="text-sm font-semibold text-[#0F2240] truncate">{kit.title}</p>
-                    {kit.type && (
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/60 capitalize">
-                        {kit.type}
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-[#0F2240]/40 py-4 text-center">No kits yet.</p>
           )}
         </div>
 

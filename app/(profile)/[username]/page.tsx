@@ -34,7 +34,7 @@ type Kit = {
   is_system: boolean
 }
 
-const TABS = ['posts', 'kits', 'dogs'] as const
+const TABS = ['posts', 'kits'] as const
 type TabValue = typeof TABS[number]
 
 export default async function ProfilePage({
@@ -340,51 +340,6 @@ export default async function ProfilePage({
                     style={{ backgroundColor: '#0F2240' }}
                   >
                     Create your first kit
-                  </Link>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'dogs' && (
-          <div className="px-4 pt-5 pb-24">
-            {dogList.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4">
-                {dogList.map((dog) => (
-                  <Link
-                    key={dog.id}
-                    href={`/${username}/${slugify(dog.name)}`}
-                    className="flex flex-col items-center gap-2 group"
-                  >
-                    <div
-                      className="relative w-20 h-20 rounded-full overflow-hidden bg-[#EDE3D6] ring-offset-2 group-hover:ring-2 group-hover:ring-[#0F2240] transition-all"
-                      style={{ boxShadow: '0 1px 6px rgba(15,34,64,0.12)' }}
-                    >
-                      {dog.avatar ? (
-                        <Image src={dog.avatar} alt={dog.name} fill className="object-cover" />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-2xl font-bold text-[#0F2240]/40">
-                          {dog.name[0].toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[13px] font-medium text-[#0F2240] text-center leading-tight">
-                      {dog.name}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="py-10 text-center">
-                <p className="text-[14px] text-[#0F2240]/40 mb-3">No dogs yet.</p>
-                {isOwnProfile && (
-                  <Link
-                    href="/dogs/new"
-                    className="text-sm font-medium px-4 py-1.5 rounded-full text-white"
-                    style={{ backgroundColor: '#0F2240' }}
-                  >
-                    Add a dog
                   </Link>
                 )}
               </div>

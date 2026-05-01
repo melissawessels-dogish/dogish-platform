@@ -23,3 +23,18 @@ $$;
 CREATE TRIGGER human_create_system_kits
   AFTER INSERT ON human
   FOR EACH ROW EXECUTE FUNCTION create_system_kits_for_human();
+
+-- Backfill system kits for existing humans
+INSERT INTO kit (owner_id, title, description, is_system, is_private)
+SELECT h.id, 'Saved', 'Posts you have saved', true, true
+FROM human h
+WHERE NOT EXISTS (
+  SELECT 1 FROM kit k WHERE k.owner_id = h.id AND k.title = 'Saved' AND k.is_system = true
+);
+
+INSERT INTO kit (owner_id, title, description, is_system, is_private)
+SELECT h.id, 'Favorite Places', 'Dog-friendly places you love', true, false
+FROM human h
+WHERE NOT EXISTS (
+  SELECT 1 FROM kit k WHERE k.owner_id = h.id AND k.title = 'Favorite Places' AND k.is_system = true
+);
