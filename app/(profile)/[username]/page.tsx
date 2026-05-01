@@ -107,6 +107,23 @@ export default async function ProfilePage({
   const kitList = ((kitsRaw ?? []) as Kit[])
     .filter((k) => isOwnProfile || !k.is_private)
 
+  // Fetch one cover image per kit: most recently added post item
+  const coverImageMap: Record<string, string> = {}
+  if (kitList.length > 0) {
+    const { data: coverItems } = await admin
+      .from('kit_items')
+      .select('pack_id, post:post_id(images), added_at')
+      .in('pack_id', kitList.map((k) => k.id))
+      .eq('item_type', 'post')
+      .order('added_at', { ascending: false })
+
+    for (const row of (coverItems ?? []) as unknown as { pack_id: string; post: { images: string[] | null } | null; added_at: string }[]) {
+      if (!coverImageMap[row.pack_id] && row.post?.images?.[0]) {
+        coverImageMap[row.pack_id] = row.post.images[0]
+      }
+    }
+  }
+
   const followerCount = h.follower_count ?? 0
 
   return (
@@ -298,37 +315,47 @@ export default async function ProfilePage({
             </div>
             {kitList.length > 0 ? (
               <div className="grid grid-cols-2 gap-3">
-                {kitList.map((kit) => (
+                {kitList.map((kit) => {
+                  const coverImage = coverImageMap[kit.id] ?? null
+                  return (
                   <Link
                     key={kit.id}
                     href={`/${username}/kits/${kit.id}`}
                     className="group rounded-xl overflow-hidden border border-[#0F2240]/10 hover:border-[#0F2240]/25 transition-colors"
                   >
                     <div
-                      className="w-full flex items-center justify-center"
-                      style={{ aspectRatio: '16/9', backgroundColor: kit.is_system ? '#EDE3D6' : '#0F2240' }}
+                      className="relative w-full flex items-center justify-center"
+                      style={{ aspectRatio: '16/9', backgroundColor: coverImage ? undefined : (kit.is_system ? '#EDE3D6' : '#0F2240') }}
                     >
-                      <span
-                        className="text-2xl font-bold select-none"
-                        style={{ color: kit.is_system ? 'rgba(15,34,64,0.3)' : 'rgba(255,255,255,0.2)' }}
-                      >
-                        {kit.title[0]?.toUpperCase()}
-                      </span>
+                      {coverImage ? (
+                        <Image src={coverImage} alt={kit.title} fill className="object-cover" />
+                      ) : (
+                        <span
+                          className="text-2xl font-bold select-none"
+                          style={{ color: kit.is_system ? 'rgba(15,34,64,0.3)' : 'rgba(255,255,255,0.2)' }}
+                        >
+                          {kit.title[0]?.toUpperCase()}
+                        </span>
+                      )}
                     </div>
                     <div className="px-3 py-2.5 bg-white">
                       <p className="text-sm font-semibold text-[#0F2240] truncate">{kit.title}</p>
-                      {kit.is_system ? (
-                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/50">
-                          system
+                      {kit.is_private ? (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[#0F2240]/35">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                          </svg>
                         </span>
-                      ) : kit.type ? (
+                      ) : !kit.is_system && kit.type ? (
                         <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#F7F3EE] text-[#0F2240]/60 capitalize">
                           {kit.type}
                         </span>
                       ) : null}
                     </div>
                   </Link>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="py-8 text-center">
