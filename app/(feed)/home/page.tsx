@@ -5,6 +5,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import BottomNav from '@/components/BottomNav'
 import PostCard, { type PostCardPost } from '@/components/PostCard'
 import SignOutButton from '@/components/SignOutButton'
+import StoryRow, { type StoryGroup } from '@/components/StoryRow'
+import type { Story } from '@/components/StoryViewer'
 
 export default async function FeedPage() {
   const supabase = await createClient()
@@ -96,6 +98,63 @@ export default async function FeedPage() {
       .slice(0, 50)
   }
 
+  // Fetch active stories (current user + followed humans)
+  const storyAuthorIds = [user.id, ...humanIds]
+  type RawStory = {
+    id: string
+    media_url: string
+    media_type: string
+    caption: string | null
+    author_id: string
+    author: { id: string; username: string | null; display_name: string | null; avatar: string | null }
+    dog: { name: string } | null
+  }
+  let storyGroups: StoryGroup[] = []
+  if (storyAuthorIds.length > 0) {
+    const { data: rawStories } = await admin
+      .from('story')
+      .select('id, media_url, media_type, caption, author_id, author:human!author_id(id, username, display_name, avatar), dog:dog!dog_id(name)')
+      .in('author_id', storyAuthorIds)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: true })
+
+    // Fetch viewer's seen story IDs
+    const allStoryIds = ((rawStories ?? []) as unknown as RawStory[]).map((s) => s.id)
+    const seenIds = new Set<string>()
+    if (allStoryIds.length > 0) {
+      const { data: views } = await supabase
+        .from('story_view')
+        .select('story_id')
+        .in('story_id', allStoryIds)
+      for (const v of views ?? []) seenIds.add(v.story_id)
+    }
+
+    // Group by author
+    const groupMap = new Map<string, StoryGroup>()
+    for (const s of (rawStories ?? []) as unknown as RawStory[]) {
+      if (!groupMap.has(s.author_id)) {
+        groupMap.set(s.author_id, {
+          author: s.author,
+          stories: [],
+          hasUnseen: false,
+          isOwn: s.author_id === user.id,
+        })
+      }
+      const g = groupMap.get(s.author_id)!
+      const story: Story = {
+        id: s.id,
+        media_url: s.media_url,
+        media_type: s.media_type,
+        caption: s.caption,
+        author: s.author,
+        dog: s.dog,
+      }
+      g.stories.push(story)
+      if (!seenIds.has(s.id)) g.hasUnseen = true
+    }
+    storyGroups = Array.from(groupMap.values())
+  }
+
   // Check which posts the current user has liked and saved
   const likedPostIds = new Set<string>()
   const savedPostIds = new Set<string>()
@@ -126,15 +185,28 @@ export default async function FeedPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/dogish-wordmark.svg" alt="Dogish" style={{ height: 26 }} />
           <div className="w-16 flex justify-end items-center gap-2">
-            <Link href="/explore" aria-label="Explore" className="flex items-center justify-center text-[#0F2240]/50 hover:text-[#0F2240] transition-colors">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            <Link
+              href="/explore"
+              aria-label="Search"
+              className="flex items-center justify-center text-[#0F2240]/50 hover:text-[#0F2240] transition-colors"
+            >
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
               </svg>
             </Link>
             <SignOutButton />
           </div>
         </div>
+
+        {/* Stories */}
+        {storyGroups.length > 0 && (
+          <StoryRow
+            groups={storyGroups}
+            currentUserId={user.id}
+            currentUserAvatar={me?.avatar ?? null}
+          />
+        )}
 
         {posts.length === 0 ? (
           /* Empty state */
