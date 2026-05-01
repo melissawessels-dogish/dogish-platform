@@ -1,7 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 
 export async function createClient() {
+  // Dynamic import keeps next/headers (a CJS-only module) out of the module's
+  // top-level evaluation. If Turbopack accidentally includes this file in a
+  // client chunk, it won't trigger "require is not defined" at load time.
+  const { cookies } = await import('next/headers')
   const cookieStore = await cookies()
 
   return createServerClient(
