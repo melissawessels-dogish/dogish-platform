@@ -8,20 +8,24 @@ import { cn } from '@/lib/utils'
 interface BookmarkButtonProps {
   postId: string
   initialSaved: boolean
+  onSaveChange?: (saved: boolean) => void
   className?: string
 }
 
-export function BookmarkButton({ postId, initialSaved, className }: BookmarkButtonProps) {
+export function BookmarkButton({ postId, initialSaved, onSaveChange, className }: BookmarkButtonProps) {
   const [saved, setSaved] = useState(initialSaved)
   const [isPending, startTransition] = useTransition()
 
   function handleToggle() {
     const next = !saved
     setSaved(next)
+    onSaveChange?.(next)
     startTransition(async () => {
       const result = next ? await savePostToKit(postId) : await unsavePostFromKit(postId)
-      console.log('[BookmarkButton] action result:', result)
-      if (result.error) setSaved(!next)
+      if (result.error) {
+        setSaved(!next)
+        onSaveChange?.(!next)
+      }
     })
   }
 

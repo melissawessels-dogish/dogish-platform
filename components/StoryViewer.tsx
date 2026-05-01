@@ -27,26 +27,18 @@ type Props = {
 export default function StoryViewer({ stories, initialIndex = 0, onClose }: Props) {
   const [index, setIndex] = useState(initialIndex)
   const [muted, setMuted] = useState(true)
-  const [progress, setProgress] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
   const markedRef = useRef(new Set<string>())
 
   const story = stories[index]
 
   const goNext = useCallback(() => {
-    if (index < stories.length - 1) {
-      setIndex(index + 1)
-      setProgress(0)
-    } else {
-      onClose()
-    }
+    if (index < stories.length - 1) setIndex(index + 1)
+    else onClose()
   }, [index, stories.length, onClose])
 
   const goPrev = useCallback(() => {
-    if (index > 0) {
-      setIndex(index - 1)
-      setProgress(0)
-    }
+    if (index > 0) setIndex(index - 1)
   }, [index])
 
   // Mark viewed
@@ -60,43 +52,6 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Prop
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted
   }, [muted])
-
-  // Progress bar for images — advance after 5s
-  useEffect(() => {
-    if (!story || story.media_type !== 'image') return
-    setProgress(0)
-    const start = Date.now()
-    const duration = 5000
-    let raf: number
-    const tick = () => {
-      const elapsed = Date.now() - start
-      const pct = Math.min((elapsed / duration) * 100, 100)
-      setProgress(pct)
-      if (pct < 100) {
-        raf = requestAnimationFrame(tick)
-      } else {
-        goNext()
-      }
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [index, story?.media_type, goNext])
-
-  // For videos, track playback progress
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video || story?.media_type !== 'video') return
-    const update = () => {
-      if (video.duration) setProgress((video.currentTime / video.duration) * 100)
-    }
-    const onEnded = () => goNext()
-    video.addEventListener('timeupdate', update)
-    video.addEventListener('ended', onEnded)
-    return () => {
-      video.removeEventListener('timeupdate', update)
-      video.removeEventListener('ended', onEnded)
-    }
-  }, [index, story?.media_type, goNext])
 
   // Keyboard nav
   useEffect(() => {
@@ -122,17 +77,14 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Prop
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center" style={{ touchAction: 'none' }}>
       <div className="relative w-full h-full max-w-sm mx-auto">
 
-        {/* Progress bars */}
+        {/* Static position indicators */}
         <div className="absolute top-3 left-3 right-3 z-10 flex gap-1">
           {stories.map((s, i) => (
-            <div key={s.id} className="flex-1 h-[2px] bg-white/30 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-white rounded-full transition-none"
-                style={{
-                  width: i < index ? '100%' : i === index ? `${progress}%` : '0%',
-                }}
-              />
-            </div>
+            <div
+              key={s.id}
+              className="flex-1 h-[2px] rounded-full"
+              style={{ backgroundColor: i <= index ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.3)' }}
+            />
           ))}
         </div>
 
@@ -150,6 +102,7 @@ export default function StoryViewer({ stories, initialIndex = 0, onClose }: Prop
         <div className="absolute inset-0 cursor-pointer" onClick={handleTap}>
           {story.media_type === 'video' ? (
             <video
+              key={story.id}
               ref={videoRef}
               src={story.media_url}
               className="w-full h-full object-cover"
