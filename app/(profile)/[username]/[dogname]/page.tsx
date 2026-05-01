@@ -98,16 +98,17 @@ export default async function DogProfilePage({
   const d = { ...(dog as DogPage), favorite_places_kit_id: dogExtra?.favorite_places_kit_id ?? null }
   const allBreeds = getAllBreeds(d)
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const isOwnDog = user?.id === d.owner_id
+  const { data: { session } } = await supabase.auth.getSession()
+  const userId = session?.user?.id ?? null
+  const isOwnDog = userId === d.owner_id
 
   // Check if current user is following this dog
   let isFollowingDog = false
-  if (user && !isOwnDog) {
+  if (userId && !isOwnDog) {
     const { data: followRow } = await supabase
       .from('follow')
       .select('id')
-      .eq('follower_id', user.id)
+      .eq('follower_id', userId)
       .eq('target_dog_id', d.id)
       .maybeSingle()
     isFollowingDog = !!followRow
@@ -193,7 +194,7 @@ export default async function DogProfilePage({
                 >
                   Edit {d.name}
                 </Link>
-              ) : !user ? (
+              ) : !userId ? (
                 <Link
                   href="/login"
                   className="text-[13px] font-semibold px-6 py-1.5 rounded-full bg-[#0F2240] text-white hover:bg-[#0F2240]/90 transition-colors whitespace-nowrap"

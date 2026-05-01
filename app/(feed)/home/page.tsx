@@ -10,7 +10,8 @@ export default async function FeedPage() {
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
   if (!user) redirect('/login')
 
   // Get current user's human row

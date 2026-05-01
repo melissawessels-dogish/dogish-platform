@@ -37,7 +37,8 @@ function locationMatches(a: string | null | undefined, b: string | null | undefi
 export default async function ExplorePage() {
   const supabase = await createClient()
   const admin = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
 
   // Use user client for follow state (RLS-protected), admin for public catalog queries
   let followedHumanIds: string[] = []

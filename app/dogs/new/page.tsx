@@ -144,10 +144,12 @@ function AvatarUploader({
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-1.5 text-[#0F2240]/40 group-hover:text-[#0F2240] transition-colors">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <ellipse cx="9" cy="7.5" rx="2" ry="2.5"/>
+              <ellipse cx="15" cy="7.5" rx="2" ry="2.5"/>
+              <ellipse cx="5.5" cy="12" rx="1.8" ry="2.2"/>
+              <ellipse cx="18.5" cy="12" rx="1.8" ry="2.2"/>
+              <path d="M12 15c-3.5 0-6 2-5.5 4 .4 1.5 2.5 2.5 5.5 2.5s5.1-1 5.5-2.5c.5-2-2-4-5.5-4z"/>
             </svg>
             <span className="text-[10px] font-medium tracking-wide uppercase">Photo</span>
           </div>
@@ -465,22 +467,19 @@ export default function NewDogPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
 
-      // Upload new avatar file if selected; otherwise keep existing URL
-      let avatarUrl: string | null = form.avatarPreview
-      if (form.avatar) {
-        const ext = form.avatar.name.split('.').pop()
-        const path = `${user.id}/${Date.now()}.${ext}`
+      const uploadAvatar = async (dogId: string): Promise<string | null> => {
+        if (!form.avatar) return form.avatarPreview
+        const path = `dogs/${dogId}/${form.avatar.name}`
         const { error: uploadError } = await supabase.storage
           .from('avatars')
           .upload(path, form.avatar, { upsert: true })
         if (uploadError) throw uploadError
         const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-        avatarUrl = urlData.publicUrl
+        return urlData.publicUrl
       }
 
-      const dogFields = {
+      const dogFieldsBase = {
         name: form.name.trim(),
-        avatar: avatarUrl,
         birthday: form.birthday || null,
         size: form.size || null,
         sex: form.sex,
@@ -506,22 +505,27 @@ export default function NewDogPage() {
       let savedDogId: string
 
       if (existingDogId) {
-        // Update the onboarding-created dog
+        const avatarUrl = await uploadAvatar(existingDogId)
         const { error: dogError } = await supabase
           .from('dog')
-          .update(dogFields)
+          .update({ ...dogFieldsBase, avatar: avatarUrl })
           .eq('id', existingDogId)
         if (dogError) throw dogError
         savedDogId = existingDogId
       } else {
-        // Insert a brand new dog
+        // Insert without avatar first so we have the dog ID for the storage path
         const { data: dog, error: dogError } = await supabase
           .from('dog')
-          .insert({ owner_id: user.id, ...dogFields })
+          .insert({ owner_id: user.id, ...dogFieldsBase, avatar: null })
           .select('id')
           .single()
         if (dogError) throw dogError
         savedDogId = dog.id
+
+        const avatarUrl = await uploadAvatar(savedDogId)
+        if (avatarUrl) {
+          await supabase.from('dog').update({ avatar: avatarUrl }).eq('id', savedDogId)
+        }
 
         // Auto-create Favorite Places kit for new dogs
         const { data: favKit } = await supabase

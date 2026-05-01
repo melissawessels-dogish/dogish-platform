@@ -47,27 +47,17 @@ export default async function ProfilePage({
 
   const h = human as Human
 
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Look up the session user's own username to determine ownership
-  let myUsername: string | null = null
-  if (user) {
-    const { data: me } = await admin
-      .from('human')
-      .select('username')
-      .eq('id', user.id)
-      .maybeSingle()
-    myUsername = me?.username ?? null
-  }
-  const isOwnProfile = !!myUsername && myUsername.toLowerCase() === username.toLowerCase()
+  const { data: { session } } = await supabase.auth.getSession()
+  const userId = session?.user?.id ?? null
+  const isOwnProfile = userId === h.id
 
   // Check if current user is following this human
   let isFollowing = false
-  if (user && !isOwnProfile) {
+  if (userId && !isOwnProfile) {
     const { data: followRow } = await supabase
       .from('follow')
       .select('id')
-      .eq('follower_id', user.id)
+      .eq('follower_id', userId)
       .eq('target_human_id', h.id)
       .maybeSingle()
     isFollowing = !!followRow
@@ -182,7 +172,7 @@ export default async function ProfilePage({
                 >
                   Edit profile
                 </Link>
-              ) : !user ? (
+              ) : !userId ? (
                 <Link
                   href="/login"
                   className="text-[13px] font-semibold px-6 py-1.5 rounded-full bg-[#0F2240] text-white hover:bg-[#0F2240]/90 transition-colors whitespace-nowrap"
@@ -220,7 +210,7 @@ export default async function ProfilePage({
           {/* Stats */}
           <ProfileStats
             profileUserId={h.id}
-            currentUserId={user?.id ?? null}
+            currentUserId={userId}
             postCount={postList.length}
             followerCount={followerCount}
             followingCount={h.following_count ?? 0}

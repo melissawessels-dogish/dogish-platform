@@ -7,7 +7,8 @@ import ProfileEditForm from '@/components/ProfileEditForm'
 export default async function EditProfilePage() {
   const supabase = await createClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
   if (!user) redirect('/login')
 
   // Fetch the session user's own human row by their auth id

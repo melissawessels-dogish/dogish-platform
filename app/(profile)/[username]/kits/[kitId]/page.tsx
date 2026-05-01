@@ -59,8 +59,9 @@ export default async function KitDetailPage({
 
   if (owner.username?.toLowerCase() !== username.toLowerCase()) notFound()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  const isOwner = user?.id === kit.owner_id
+  const { data: { session } } = await supabase.auth.getSession()
+  const userId = session?.user?.id ?? null
+  const isOwner = userId === kit.owner_id
 
   if (kit.is_private && !isOwner) redirect('/feed')
 
@@ -175,7 +176,7 @@ export default async function KitDetailPage({
             isOwner={isOwner}
             initialItems={items}
             kitType={kit.type}
-            userId={user?.id ?? null}
+            userId={userId}
           />
 
           {/* Delete kit */}

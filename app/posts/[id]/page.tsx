@@ -79,7 +79,7 @@ export default async function PostPage({
       .eq('post_id', id)
       .order('created_at', { ascending: true }),
 
-    supabase.auth.getUser(),
+    supabase.auth.getSession(),
   ])
 
   if (!postResult.data) notFound()
@@ -91,7 +91,7 @@ export default async function PostPage({
   const likeCount = p.like_count ?? 0
   const comments = (commentsResult.data ?? []) as unknown as Comment[]
 
-  const sessionUser = sessionResult.data.user
+  const sessionUser = sessionResult.data.session?.user ?? null
   let currentUser: Author | null = null
   let isLiked = false
 
