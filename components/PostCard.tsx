@@ -202,7 +202,7 @@ export default function PostCard({
           <button
             type="button"
             onClick={() => setRepostDrawerOpen(true)}
-            aria-label={isReposted ? 'Undo repost' : 'Repost'}
+            aria-label="Repost"
             className="flex items-center gap-1.5 transition-colors"
           >
             <Repeat2

@@ -65,6 +65,7 @@ export default function RepostDrawer({
   }, [open, onClose])
 
   const handleQuickRepost = () => {
+    if (isReposted) { onClose(); return }
     startTransition(async () => {
       try {
         await quickRepost(post.id)
@@ -76,6 +77,7 @@ export default function RepostDrawer({
   }
 
   const handleUndo = () => {
+    if (!isReposted) { onClose(); return }
     startTransition(async () => {
       try {
         await undoRepost(post.id)

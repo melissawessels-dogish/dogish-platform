@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Repeat2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import FollowButton from '@/components/follow-button'
@@ -90,30 +89,12 @@ export default async function ProfilePage({
   const dogList: Dog[] = (dogs ?? []) as Dog[]
 
   type OwnPost = { id: string; images: string[] | null; created_at: string }
-  type RepostRow = { id: string; created_at: string; post: { id: string; images: string[] | null } | null }
-  type GridItem = { key: string; postId: string; image: string | null; sortAt: string; isRepost: boolean }
 
-  const [postsRes, repostsRes] = await Promise.all([
-    admin.from('post').select('id, images, created_at')
-      .eq('author_id', h.id).eq('is_private', false)
-      .order('created_at', { ascending: false }).limit(60),
-    admin.from('repost')
-      .select('id, created_at, post:post!original_post_id(id, images)')
-      .eq('reposter_id', h.id)
-      .order('created_at', { ascending: false }).limit(30),
-  ])
+  const { data: postsData } = await admin.from('post').select('id, images, created_at')
+    .eq('author_id', h.id).eq('is_private', false)
+    .order('created_at', { ascending: false }).limit(60)
 
-  const ownPosts = (postsRes.data ?? []) as OwnPost[]
-  const repostRows = (repostsRes.data ?? []) as unknown as RepostRow[]
-
-  const gridItems: GridItem[] = [
-    ...ownPosts.map((p): GridItem => ({
-      key: p.id, postId: p.id, image: p.images?.[0] ?? null, sortAt: p.created_at, isRepost: false,
-    })),
-    ...repostRows.filter((r) => r.post != null).map((r): GridItem => ({
-      key: r.id, postId: r.post!.id, image: r.post!.images?.[0] ?? null, sortAt: r.created_at, isRepost: true,
-    })),
-  ].sort((a, b) => new Date(b.sortAt).getTime() - new Date(a.sortAt).getTime())
+  const ownPosts = (postsData ?? []) as OwnPost[]
 
   const { data: kitsRaw } = await admin
     .from('kit')
@@ -290,16 +271,16 @@ export default async function ProfilePage({
         {/* Tab content */}
         {activeTab === 'posts' && (
           <div className="pb-24">
-            {gridItems.length > 0 ? (
+            {ownPosts.length > 0 ? (
               <div className="grid grid-cols-3 gap-0.5">
-                {gridItems.map((item) => (
+                {ownPosts.map((post) => (
                   <Link
-                    key={item.key}
-                    href={`/posts/${item.postId}`}
+                    key={post.id}
+                    href={`/posts/${post.id}`}
                     className="relative aspect-[4/5] block bg-[#EDE3D6]"
                   >
-                    {item.image ? (
-                      <Image src={item.image} alt="" fill className="object-cover" />
+                    {post.images?.[0] ? (
+                      <Image src={post.images[0]} alt="" fill className="object-cover" />
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(15,34,64,0.2)" strokeWidth="1.5">
@@ -307,11 +288,6 @@ export default async function ProfilePage({
                           <circle cx="8.5" cy="8.5" r="1.5" />
                           <polyline points="21 15 16 10 5 21" />
                         </svg>
-                      </div>
-                    )}
-                    {item.isRepost && (
-                      <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5">
-                        <Repeat2 className="h-3 w-3 text-white" />
                       </div>
                     )}
                   </Link>
