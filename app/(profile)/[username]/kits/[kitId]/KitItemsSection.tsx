@@ -238,7 +238,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
           state,
           category: placeCategory || null,
         })
-        .select('id, name, address, city, state, category')
+        .select('id, name, address, city, state, category, lat, lng, cover_image')
         .single()
       if (placeErr) throw placeErr
 
@@ -289,7 +289,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
     }
   }
 
-  const handleFavoritePlaceSelect = async (place: { id: string; name: string; city: string; state: string }) => {
+  const handleFavoritePlaceSelect = async (place: { id: string; name: string; city: string; state: string; cover_image?: string | null }) => {
     if (items.some((i) => i.place_id === place.id)) return
     setAddingFavoritePlace(true)
     try {

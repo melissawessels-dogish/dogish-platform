@@ -4,10 +4,10 @@ import Link from 'next/link'
 import { Repeat2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import BottomNav from '@/components/BottomNav'
 import PostCard, { type PostCardPost } from '@/components/PostCard'
 import StoryRow, { type StoryGroup } from '@/components/StoryRow'
 import type { Story } from '@/components/StoryViewer'
+import HomeTabsClient from './HomeTabsClient'
 
 const POST_SELECT = `
   id, body, images, created_at, like_count, comment_count, repost_count, save_count,
@@ -193,90 +193,91 @@ export default async function FeedPage() {
     <div className="min-h-svh bg-white pb-16">
       <div className="max-w-[380px] mx-auto">
 
-        {/* Wordmark */}
-        <div className="flex items-center justify-between pt-4 pb-2 px-3 border-b border-[#F0F0F0]">
-          <div className="w-16" />
+        {/* Sticky top bar: Wordmark + Avatar */}
+        <div className="sticky top-0 z-50 bg-white flex items-center justify-between pt-4 pb-2 px-3 border-b border-[#F0F0F0]">
+          <div className="w-9" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/dogish-wordmark.svg" alt="Dogish" style={{ height: 26 }} />
-          <div className="w-16 flex justify-end items-center">
-            <Link
-              href="/explore"
-              aria-label="Search"
-              className="flex items-center justify-center text-[#0F2240]/50 hover:text-[#0F2240] transition-colors"
-            >
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
+          <div className="w-9 flex justify-end">
+            <Link href={`/${me?.username ?? '/onboarding/profile'}`} aria-label="Profile">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden bg-[#F7F3EE] flex items-center justify-center">
+                {me?.avatar ? (
+                  <Image src={me.avatar} alt={me.display_name ?? me.username ?? ''} fill className="object-cover" />
+                ) : (
+                  <span className="text-[11px] font-bold text-[#0F2240]">
+                    {(me?.display_name ?? me?.username ?? '?')[0].toUpperCase()}
+                  </span>
+                )}
+              </div>
             </Link>
           </div>
         </div>
 
-        {/* Stories */}
-        {storyGroups.length > 0 && (
-          <StoryRow
-            groups={storyGroups}
-            currentUserId={user.id}
-            currentUserAvatar={me?.avatar ?? null}
-          />
-        )}
+        {/* Feed / Reels toggle + content */}
+        <HomeTabsClient>
+          <>
+            {storyGroups.length > 0 && (
+              <StoryRow
+                groups={storyGroups}
+                currentUserId={user.id}
+                currentUserAvatar={me?.avatar ?? null}
+              />
+            )}
 
-        {isEmpty ? (
-          <div className="flex flex-col items-center gap-3 py-20 px-6 text-center">
-            <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#EDE3D6' }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="1.5" opacity="0.5">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-            </div>
-            <p className="text-[15px] font-semibold text-[#0F2240]">Your feed is empty.</p>
-            <p className="text-[13px] text-[#0F2240]/50">Find people and dogs to follow.</p>
-            <Link href="/search" className="mt-2 text-[13px] font-semibold px-5 py-2 rounded-full text-white" style={{ backgroundColor: '#0F2240' }}>
-              Discover
-            </Link>
-          </div>
-        ) : (
-          <div className="flex flex-col">
-            {feedItems.map((item) => {
-              const post = item.post
-              const commonProps = {
-                post,
-                isLiked: likedPostIds.has(post.id),
-                isSaved: savedPostIds.has(post.id),
-                isReposted: repostedPostIds.has(post.id),
-                currentUserId: user.id,
-                currentUser: me ?? null,
-              }
-
-              if (item.type === 'post') {
-                return <PostCard key={post.id} {...commonProps} />
-              }
-
-              // Repost item — show reposter header above the post card
-              return (
-                <div key={item.repostId}>
-                  {/* "X reposted" label */}
-                  <div className="flex items-center gap-1.5 px-4 pt-3 pb-0">
-                    <Repeat2 className="h-3.5 w-3.5 text-[#0F2240]/40 shrink-0" />
-                    <span className="text-[12px] text-[#0F2240]/40 font-medium">
-                      {item.reposter.display_name ?? item.reposter.username} reposted
-                    </span>
-                  </div>
-                  {/* Quote caption */}
-                  {item.caption && (
-                    <div className="px-4 pt-2 pb-1">
-                      <p className="text-[14px] text-[#0F2240] leading-snug">{item.caption}</p>
-                    </div>
-                  )}
-                  <PostCard key={`${item.repostId}-post`} {...commonProps} />
+            {isEmpty ? (
+              <div className="flex flex-col items-center gap-3 py-20 px-6 text-center">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: '#EDE3D6' }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0F2240" strokeWidth="1.5" opacity="0.5">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                  </svg>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+                <p className="text-[15px] font-semibold text-[#0F2240]">Your feed is empty.</p>
+                <p className="text-[13px] text-[#0F2240]/50">Find people and dogs to follow.</p>
+                <Link href="/discover" className="mt-2 text-[13px] font-semibold px-5 py-2 rounded-full text-white" style={{ backgroundColor: '#0F2240' }}>
+                  Discover
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {feedItems.map((item) => {
+                  const post = item.post
+                  const commonProps = {
+                    post,
+                    isLiked: likedPostIds.has(post.id),
+                    isSaved: savedPostIds.has(post.id),
+                    isReposted: repostedPostIds.has(post.id),
+                    currentUserId: user.id,
+                    currentUser: me ?? null,
+                  }
 
-      <BottomNav username={me?.username ?? null} />
+                  if (item.type === 'post') {
+                    return <PostCard key={post.id} {...commonProps} />
+                  }
+
+                  return (
+                    <div key={item.repostId}>
+                      <div className="flex items-center gap-1.5 px-4 pt-3 pb-0">
+                        <Repeat2 className="h-3.5 w-3.5 text-[#0F2240]/40 shrink-0" />
+                        <span className="text-[12px] text-[#0F2240]/40 font-medium">
+                          {item.reposter.display_name ?? item.reposter.username} reposted
+                        </span>
+                      </div>
+                      {item.caption && (
+                        <div className="px-4 pt-2 pb-1">
+                          <p className="text-[14px] text-[#0F2240] leading-snug">{item.caption}</p>
+                        </div>
+                      )}
+                      <PostCard key={`${item.repostId}-post`} {...commonProps} />
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        </HomeTabsClient>
+
+      </div>
     </div>
   )
 }

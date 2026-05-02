@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      { source: '/explore', destination: '/discover', permanent: true },
+    ]
+  },
   experimental: {
     allowedDevOrigins: ['localhost'],
   },
