@@ -622,7 +622,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
           {staticMapUrl && (
             <div className="mb-5 rounded-xl overflow-hidden bg-[#EDE3D6]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={staticMapUrl} alt="Map of saved places" className="w-full block" style={{ height: 180 }} />
+              <img src={staticMapUrl} alt="Map of saved places" style={{ width: '100%', height: 'auto', display: 'block' }} />
             </div>
           )}
 
