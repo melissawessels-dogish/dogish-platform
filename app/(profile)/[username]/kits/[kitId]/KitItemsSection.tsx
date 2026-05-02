@@ -332,8 +332,9 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
     if (!isFavoritePlaces) return null
     const pinned = items.filter((i) => i.item_type === 'place' && i.place?.lat != null && i.place?.lng != null)
     if (!pinned.length) return null
-    const markers = pinned.map((i) => `markers=color:red|${i.place!.lat},${i.place!.lng}`).join('&')
-    return `https://maps.googleapis.com/maps/api/staticmap?size=800x320&scale=2&${markers}&key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}`
+    const params = new URLSearchParams()
+    pinned.forEach((i) => params.append('m', `${i.place!.lat},${i.place!.lng}`))
+    return `/api/places/staticmap?${params.toString()}`
   })()
 
   return (
