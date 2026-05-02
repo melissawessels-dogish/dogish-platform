@@ -181,6 +181,7 @@ export default async function KitDetailPage({
             kitType={kit.type}
             userId={userId}
             isSystem={kit.is_system}
+            kitTitle={kit.title}
           />
 
           {/* Delete kit */}

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
+import PlacePicker from '@/components/ui/PlacePicker'
 
 export type KitItem = {
   id: string
@@ -42,6 +43,7 @@ type Props = {
   kitType: string | null
   userId: string | null
   isSystem?: boolean
+  kitTitle?: string
 }
 
 const PLACE_CATEGORIES = ['Park', 'Trail', 'Restaurant', 'Vet', 'Groomer', 'Hotel', 'Other']
@@ -56,10 +58,12 @@ function addButtonLabel(kitType: string | null): string {
   return '+ Add an item'
 }
 
-export default function KitItemsSection({ kitId, isOwner, initialItems, kitType, userId, isSystem = false }: Props) {
+export default function KitItemsSection({ kitId, isOwner, initialItems, kitType, userId, isSystem = false, kitTitle }: Props) {
   const supabase = createClient()
   const [items, setItems] = useState<KitItem[]>(initialItems)
   const [showAddPanel, setShowAddPanel] = useState(false)
+  const isFavoritePlaces = isSystem && kitTitle === 'Favorite Places'
+  const [addingFavoritePlace, setAddingFavoritePlace] = useState(false)
 
   // Product search
   const [productQuery, setProductQuery] = useState('')
@@ -284,6 +288,36 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
     }
   }
 
+  const handleFavoritePlaceSelect = async (place: { id: string; name: string; city: string; state: string }) => {
+    if (items.some((i) => i.place_id === place.id)) return
+    setAddingFavoritePlace(true)
+    try {
+      const { data: fullPlace } = await supabase
+        .from('place')
+        .select('id, name, address, city, state, category')
+        .eq('id', place.id)
+        .single()
+
+      const { data: item, error: itemErr } = await supabase
+        .from('kit_items')
+        .insert({ pack_id: kitId, item_type: 'place', place_id: place.id, position: nextPosition })
+        .select('id, pack_id, item_type, product_id, place_id, post_id, note, position, added_at')
+        .single()
+      if (itemErr) throw itemErr
+
+      setItems((prev) => [...prev, {
+        ...item,
+        product: null,
+        place: fullPlace ?? { id: place.id, name: place.name, address: null, city: place.city || null, state: place.state || null, category: null },
+        post: null,
+      }])
+    } catch {
+      // silent — place picker already shows its own loading state
+    } finally {
+      setAddingFavoritePlace(false)
+    }
+  }
+
   const removeItem = async (id: string) => {
     const { error } = await supabase.from('kit_items').delete().eq('id', id)
     if (!error) setItems((prev) => prev.filter((i) => i.id !== id))
@@ -298,7 +332,9 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-[#0F2240]/50">
           <span className="font-semibold text-[#0F2240]">{items.length}</span>{' '}
-          {items.length === 1 ? 'item' : 'items'}
+          {isFavoritePlaces
+            ? (items.length === 1 ? 'place' : 'places')
+            : (items.length === 1 ? 'item' : 'items')}
         </p>
         {isOwner && !isSystem && (
           <button
@@ -310,6 +346,20 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
           </button>
         )}
       </div>
+
+      {/* Favorite Places — PlacePicker */}
+      {isFavoritePlaces && isOwner && (
+        <div className="mb-5">
+          <p className="text-xs font-medium text-[#0F2240]/50 mb-2">Add a dog-friendly place</p>
+          <PlacePicker
+            onPlaceSelect={handleFavoritePlaceSelect}
+            placeholder="Search for a dog-friendly place…"
+          />
+          {addingFavoritePlace && (
+            <p className="text-xs text-[#0F2240]/40 mt-2">Adding…</p>
+          )}
+        </div>
+      )}
 
       {/* Add panel */}
       {showAddPanel && isOwner && !isSystem && (
@@ -554,8 +604,48 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
         </div>
       )}
 
-      {/* Products / places list */}
-      {nonPostItems.length > 0 && (
+      {/* Favorite Places — clean divider list */}
+      {isFavoritePlaces && items.length > 0 && (
+        <div className="flex flex-col divide-y divide-[#0F2240]/8">
+          {items.map((item) => {
+            const place = item.place
+            if (!place) return null
+            const locationStr = [place.city, place.state].filter(Boolean).join(', ')
+            const subtitle = [
+              place.category ? place.category.charAt(0).toUpperCase() + place.category.slice(1) : null,
+              locationStr || null,
+            ].filter(Boolean).join(' · ')
+            return (
+              <div key={item.id} className="flex items-center gap-3 py-3.5">
+                <div className="flex-1 min-w-0">
+                  <Link
+                    href={`/places/${place.id}`}
+                    className="text-sm font-medium text-[#0F2240] hover:underline truncate block"
+                  >
+                    {place.name}
+                  </Link>
+                  {subtitle && (
+                    <p className="text-xs text-[#0F2240]/50 mt-0.5 truncate">{subtitle}</p>
+                  )}
+                </div>
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    aria-label="Remove place"
+                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[#0F2240]/30 hover:text-red-500 hover:bg-red-50 transition-colors text-base leading-none"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Products / places list (non-Favorite-Places kits) */}
+      {!isFavoritePlaces && nonPostItems.length > 0 && (
         <div className="flex flex-col gap-3">
           {nonPostItems.map((item) => {
             const isPlace = item.item_type === 'place'
@@ -625,7 +715,13 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
       {items.length === 0 && (
         <div className="py-12 text-center">
           <p className="text-sm text-[#0F2240]/40">
-            {isSystem ? 'Bookmark posts to save them here.' : isOwner ? 'Add your first item.' : 'This kit is empty.'}
+            {isFavoritePlaces
+              ? 'Search for dog-friendly spots to save them here.'
+              : isSystem
+              ? 'Bookmark posts to save them here.'
+              : isOwner
+              ? 'Add your first item.'
+              : 'This kit is empty.'}
           </p>
         </div>
       )}
