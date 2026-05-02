@@ -105,14 +105,16 @@ export default function PlacePicker({
       // Fetch full details (lat/lng may not be in autocomplete response)
       const detailsRes = await fetch(`/api/places/details?place_id=${encodeURIComponent(option.place_id)}`)
       const details: PlaceOption | null = detailsRes.ok ? await detailsRes.json() : null
+      console.log('[PlacePicker] details API response:', JSON.stringify(details))
       const resolved = details ?? option
 
       // Check for existing record by google_place_id
-      const { data: existing } = await supabase
+      const { data: existing, error: existingErr } = await supabase
         .from('place')
         .select('id, name, city, state, cover_image')
         .eq('google_place_id', option.place_id)
         .maybeSingle()
+      console.log('[PlacePicker] existing record:', JSON.stringify(existing), 'error:', existingErr?.message)
 
       if (existing) {
         let city = existing.city ?? ''
@@ -129,8 +131,10 @@ export default function PlacePicker({
           updates.cover_image = resolved.cover_image ?? null
           cover_image = resolved.cover_image
         }
+        console.log('[PlacePicker] existing path — updates to apply:', JSON.stringify(updates))
         if (Object.keys(updates).length > 0) {
-          await supabase.from('place').update(updates).eq('id', existing.id)
+          const { error: updateErr } = await supabase.from('place').update(updates).eq('id', existing.id)
+          console.log('[PlacePicker] update error:', updateErr?.message)
         }
         const result = { id: existing.id, name: existing.name, city, state, cover_image }
         setSelected(result)
@@ -156,9 +160,10 @@ export default function PlacePicker({
         })
         .select('id, name, city, state, cover_image')
         .single()
+      console.log('[PlacePicker] insert result:', JSON.stringify(inserted), 'error:', error?.message)
 
       if (error || !inserted) {
-        console.error('[PlacePicker] insert error:', error?.message)
+        console.error('[PlacePicker] insert failed:', error?.message)
         setLoading(false)
         return
       }
