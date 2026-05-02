@@ -328,13 +328,14 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
   const postItems = items.filter((i) => i.item_type === 'post')
   const nonPostItems = items.filter((i) => i.item_type !== 'post')
 
-  const staticMapUrl = (() => {
+  const embedMapUrl = (() => {
     if (!isFavoritePlaces) return null
     const pinned = items.filter((i) => i.item_type === 'place' && i.place?.lat != null && i.place?.lng != null)
     if (!pinned.length) return null
-    const params = new URLSearchParams()
-    pinned.forEach((i) => params.append('m', `${i.place!.lat},${i.place!.lng}`))
-    return `/api/places/staticmap?${params.toString()}`
+    const centerLat = pinned.reduce((s, i) => s + i.place!.lat!, 0) / pinned.length
+    const centerLng = pinned.reduce((s, i) => s + i.place!.lng!, 0) / pinned.length
+    const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+    return `https://www.google.com/maps/embed/v1/search?key=${key}&q=dog+friendly&center=${centerLat},${centerLng}&zoom=13`
   })()
 
   return (
@@ -619,10 +620,17 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
       {/* Favorite Places — map + card grid */}
       {isFavoritePlaces && (
         <>
-          {staticMapUrl && (
-            <div className="mb-5 rounded-xl overflow-hidden bg-[#EDE3D6]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={staticMapUrl} alt="Map of saved places" style={{ width: '100%', height: 'auto', display: 'block' }} />
+          {embedMapUrl && (
+            <div className="mb-5 rounded-xl overflow-hidden">
+              <iframe
+                src={embedMapUrl}
+                width="100%"
+                height="300"
+                style={{ border: 0, display: 'block' }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
           )}
 
