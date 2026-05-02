@@ -29,12 +29,14 @@ export default function HomeTabsClient({ children }: { children: React.ReactNode
       </div>
 
       {/* Feed — hidden (not unmounted) when Reels is active */}
-      <div style={{ display: tab === 'feed' ? 'block' : 'none' }}>
+      <div style={{ display: tab === 'feed' ? 'block' : 'none', paddingBottom: 64 }}>
         {children}
       </div>
 
-      {/* Reels overlay — fixed full-screen, mounted immediately */}
-      <ReelsInlineView isActive={tab === 'reels'} />
+      {/* Reels — normal-flow snap-scroll, mounted immediately, shown/hidden by parent */}
+      <div style={{ display: tab === 'reels' ? 'block' : 'none' }}>
+        <ReelsInlineView isActive={tab === 'reels'} />
+      </div>
     </>
   )
 }

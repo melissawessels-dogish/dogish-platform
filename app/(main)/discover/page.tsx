@@ -9,6 +9,7 @@ import SuggestedPeopleSection, { type SuggestedPerson } from './SuggestedPeopleS
 import SuggestedDogsSection, { type SuggestedDog } from './SuggestedDogsSection'
 import PopularPostsSection from './PopularPostsSection'
 import NeighborhoodPlaces from '@/components/explore/NeighborhoodPlaces'
+import CurrentUserAvatar from '@/components/CurrentUserAvatar'
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -323,8 +324,13 @@ export default function ExplorePage() {
     <div className="min-h-svh bg-white pb-20">
       <div className="max-w-lg mx-auto">
 
-        {/* Search bar — always visible */}
-        <div className="px-4 pt-5 pb-3 sticky top-0 bg-white z-10 border-b border-[#0F2240]/6">
+        {/* Top bar + search — always visible */}
+        <div className="sticky top-0 bg-white z-10 border-b border-[#0F2240]/6">
+          <div className="flex items-center justify-between px-4 pt-4 pb-2">
+            <span className="text-[18px] font-bold text-[#0F2240]">Discover</span>
+            <CurrentUserAvatar />
+          </div>
+          <div className="px-4 pb-3">
           <div className="relative">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#0F2240]/35"
@@ -366,6 +372,7 @@ export default function ExplorePage() {
               className="w-full pl-9 pr-8 h-10 rounded-xl border border-[#0F2240]/12 bg-[#F7F3EE] text-[14px] text-[#0F2240] placeholder:text-[#0F2240]/35 outline-none focus:border-[#0F2240]/25 transition-colors"
               autoComplete="off"
             />
+          </div>
           </div>
         </div>
 

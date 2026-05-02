@@ -190,7 +190,7 @@ export default async function FeedPage() {
   const isEmpty = feedItems.length === 0
 
   return (
-    <div className="min-h-svh bg-white pb-16">
+    <div className="min-h-svh bg-white">
       <div className="max-w-[380px] mx-auto">
 
         {/* Sticky top bar: Wordmark + Avatar */}

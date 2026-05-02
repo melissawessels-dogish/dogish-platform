@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import CurrentUserAvatar from '@/components/CurrentUserAvatar'
 
 const tabs = ['Messages', 'Activity'] as const
 type Tab = typeof tabs[number]
@@ -12,8 +13,11 @@ export default function InboxPage() {
     <div className="min-h-svh bg-white">
       <div className="max-w-[640px] mx-auto">
 
-        <div className="px-4 pt-4 pb-0 border-b border-[#0F2240]/8">
-          <h1 className="text-[18px] font-bold text-[#0F2240] mb-3">Inbox</h1>
+        <div className="sticky top-0 bg-white z-10 px-4 pt-4 pb-0 border-b border-[#0F2240]/8">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="text-[18px] font-bold text-[#0F2240]">Inbox</h1>
+            <CurrentUserAvatar />
+          </div>
           <div className="flex gap-6">
             {tabs.map((tab) => (
               <button

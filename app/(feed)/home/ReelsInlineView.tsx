@@ -103,7 +103,7 @@ function ReelItem({
     <div
       ref={containerRef}
       style={{
-        height: '100dvh',
+        height: 'calc(100dvh - 97px)',
         scrollSnapAlign: 'start',
         position: 'relative',
         overflow: 'hidden',
@@ -230,10 +230,9 @@ export default function ReelsInlineView({ isActive }: { isActive: boolean }) {
     load()
   }, [])
 
-  // Loading spinner — only shown when active
   if (loading) {
     return (
-      <div style={{ display: isActive ? 'flex' : 'none', position: 'fixed', inset: 0, zIndex: 40, background: '#0F2240', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: 'calc(100dvh - 97px)', background: '#0F2240', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <style>{`@keyframes reel-spin { to { transform: rotate(360deg); } }`}</style>
         <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: 'white', animation: 'reel-spin 0.8s linear infinite' }} />
       </div>
@@ -242,7 +241,7 @@ export default function ReelsInlineView({ isActive }: { isActive: boolean }) {
 
   if (reels.length === 0) {
     return (
-      <div style={{ display: isActive ? 'flex' : 'none', position: 'fixed', inset: 0, zIndex: 40, background: '#0F2240', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ height: 'calc(100dvh - 97px)', background: '#0F2240', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ color: 'white', fontSize: 16, fontWeight: 600, margin: 0 }}>No reels yet</p>
         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginTop: 6 }}>Check back soon.</p>
       </div>
@@ -255,10 +254,7 @@ export default function ReelsInlineView({ isActive }: { isActive: boolean }) {
       <div
         className="reels-inline-scroll"
         style={{
-          display: isActive ? 'block' : 'none',
-          position: 'fixed',
-          inset: 0,
-          zIndex: 40,
+          height: 'calc(100dvh - 97px)',
           overflowY: 'scroll',
           scrollSnapType: 'y mandatory',
           backgroundColor: '#0F2240',
