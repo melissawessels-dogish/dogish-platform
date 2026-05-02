@@ -18,7 +18,7 @@ export type KitItem = {
   place_id: string | null
   post_id: string | null
   product: { id: string; name: string; brand: string | null; affiliate_url: string | null; category: string | null } | null
-  place: { id: string; name: string; address: string | null; city: string | null; state: string | null; category: string | null } | null
+  place: { id: string; name: string; address: string | null; city: string | null; state: string | null; category: string | null; lat: number | null; lng: number | null; cover_image: string | null } | null
   post: { id: string; images: string[] | null; body: string | null } | null
 }
 
@@ -295,7 +295,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
     try {
       const { data: fullPlace } = await supabase
         .from('place')
-        .select('id, name, address, city, state, category')
+        .select('id, name, address, city, state, category, lat, lng, cover_image')
         .eq('id', place.id)
         .single()
 
@@ -309,7 +309,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
       setItems((prev) => [...prev, {
         ...item,
         product: null,
-        place: fullPlace ?? { id: place.id, name: place.name, address: null, city: place.city || null, state: place.state || null, category: null },
+        place: fullPlace ?? { id: place.id, name: place.name, address: null, city: place.city || null, state: place.state || null, category: null, lat: null, lng: null, cover_image: place.cover_image ?? null },
         post: null,
       }])
       setResetKey((k) => k + 1)
@@ -327,6 +327,14 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
 
   const postItems = items.filter((i) => i.item_type === 'post')
   const nonPostItems = items.filter((i) => i.item_type !== 'post')
+
+  const staticMapUrl = (() => {
+    if (!isFavoritePlaces) return null
+    const pinned = items.filter((i) => i.item_type === 'place' && i.place?.lat != null && i.place?.lng != null)
+    if (!pinned.length) return null
+    const markers = pinned.map((i) => `markers=color:red|${i.place!.lat},${i.place!.lng}`).join('&')
+    return `https://maps.googleapis.com/maps/api/staticmap?size=800x320&scale=2&${markers}&key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}`
+  })()
 
   return (
     <div>
@@ -607,44 +615,65 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
         </div>
       )}
 
-      {/* Favorite Places — clean divider list */}
-      {isFavoritePlaces && items.length > 0 && (
-        <div className="flex flex-col divide-y divide-[#0F2240]/8">
-          {items.map((item) => {
-            const place = item.place
-            if (!place) return null
-            const locationStr = [place.city, place.state].filter(Boolean).join(', ')
-            const subtitle = [
-              place.category ? place.category.charAt(0).toUpperCase() + place.category.slice(1) : null,
-              locationStr || null,
-            ].filter(Boolean).join(' · ')
-            return (
-              <div key={item.id} className="flex items-center gap-3 py-3.5">
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/places/${place.id}`}
-                    className="text-sm font-medium text-[#0F2240] hover:underline truncate block"
-                  >
-                    {place.name}
-                  </Link>
-                  {subtitle && (
-                    <p className="text-xs text-[#0F2240]/50 mt-0.5 truncate">{subtitle}</p>
-                  )}
-                </div>
-                {isOwner && (
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.id)}
-                    aria-label="Remove place"
-                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-[#0F2240]/30 hover:text-red-500 hover:bg-red-50 transition-colors text-base leading-none"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
+      {/* Favorite Places — map + card grid */}
+      {isFavoritePlaces && (
+        <>
+          {staticMapUrl && (
+            <div className="mb-5 rounded-xl overflow-hidden bg-[#EDE3D6]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={staticMapUrl} alt="Map of saved places" className="w-full block" style={{ height: 180 }} />
+            </div>
+          )}
+
+          {items.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {items.map((item) => {
+                const place = item.place
+                if (!place) return null
+                const locationStr = [place.city, place.state].filter(Boolean).join(', ')
+                return (
+                  <div key={item.id} className="relative group rounded-xl overflow-hidden bg-white" style={{ boxShadow: '0 1px 6px rgba(15,34,64,0.08)' }}>
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeItem(item.id) }}
+                        aria-label="Remove place"
+                        className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-black/35 text-white hover:bg-black/55 transition-colors text-[15px] leading-none"
+                      >
+                        ×
+                      </button>
+                    )}
+                    <Link href={`/places/${place.id}`} className="block">
+                      <div className="relative w-full overflow-hidden bg-[#EDE3D6]" style={{ aspectRatio: '16/9' }}>
+                        {place.cover_image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={place.cover_image} alt={place.name} className="absolute inset-0 w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(15,34,64,0.2)" strokeWidth="1.5">
+                              <path d="M20 10c0 6-8 13-8 13s-8-7-8-13a8 8 0 0 1 16 0z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-2.5 py-2.5">
+                        <p className="text-[13px] font-semibold text-[#0F2240] truncate leading-snug">{place.name}</p>
+                        {locationStr && (
+                          <p className="text-[11px] text-[#0F2240]/50 mt-0.5 truncate">{locationStr}</p>
+                        )}
+                      </div>
+                    </Link>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <p className="text-sm text-[#0F2240]/40">Search for dog-friendly spots to save them here.</p>
+            </div>
+          )}
+        </>
       )}
 
       {/* Products / places list (non-Favorite-Places kits) */}
@@ -714,8 +743,8 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
         </div>
       )}
 
-      {/* Empty state */}
-      {items.length === 0 && (
+      {/* Empty state (non-Favorite-Places kits only) */}
+      {!isFavoritePlaces && items.length === 0 && (
         <div className="py-12 text-center">
           <p className="text-sm text-[#0F2240]/40">
             {isFavoritePlaces
