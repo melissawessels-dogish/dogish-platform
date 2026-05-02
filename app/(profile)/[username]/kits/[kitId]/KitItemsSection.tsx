@@ -64,6 +64,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
   const [showAddPanel, setShowAddPanel] = useState(false)
   const isFavoritePlaces = isSystem && kitTitle === 'Favorite Places'
   const [addingFavoritePlace, setAddingFavoritePlace] = useState(false)
+  const [resetKey, setResetKey] = useState(0)
 
   // Product search
   const [productQuery, setProductQuery] = useState('')
@@ -311,6 +312,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
         place: fullPlace ?? { id: place.id, name: place.name, address: null, city: place.city || null, state: place.state || null, category: null },
         post: null,
       }])
+      setResetKey((k) => k + 1)
     } catch {
       // silent — place picker already shows its own loading state
     } finally {
@@ -352,6 +354,7 @@ export default function KitItemsSection({ kitId, isOwner, initialItems, kitType,
         <div className="mb-5">
           <p className="text-xs font-medium text-[#0F2240]/50 mb-2">Add a dog-friendly place</p>
           <PlacePicker
+            key={resetKey}
             onPlaceSelect={handleFavoritePlaceSelect}
             placeholder="Search for a dog-friendly place…"
           />

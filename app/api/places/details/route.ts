@@ -32,15 +32,28 @@ export async function GET(req: NextRequest) {
     headers: {
       'X-Goog-Api-Key': API_KEY,
       'X-Goog-FieldMask':
-        'id,displayName,formattedAddress,location,websiteUri,addressComponents',
+        'id,displayName,formattedAddress,location,websiteUri,addressComponents,photos',
     },
   })
 
   if (!res.ok) return NextResponse.json(null)
 
   const p = await res.json()
-  console.log('[places/details] raw Google response:', JSON.stringify(p, null, 2))
   const { city, state } = extractCityState(p.addressComponents)
+
+  // Fetch first photo URL if available
+  let cover_image: string | null = null
+  const firstPhoto = p.photos?.[0]
+  if (firstPhoto?.name) {
+    const photoRes = await fetch(
+      `https://places.googleapis.com/v1/${firstPhoto.name}/media?maxWidthPx=800&skipHttpRedirect=true&key=${API_KEY}`,
+      { cache: 'no-store' }
+    )
+    if (photoRes.ok) {
+      const photoData = await photoRes.json()
+      cover_image = photoData.photoUri ?? null
+    }
+  }
 
   return NextResponse.json({
     place_id: `places/${p.id}`,
@@ -51,5 +64,6 @@ export async function GET(req: NextRequest) {
     lat: p.location?.latitude ?? null,
     lng: p.location?.longitude ?? null,
     website: p.websiteUri ?? null,
+    cover_image,
   })
 }

@@ -185,7 +185,7 @@ export default async function KitDetailPage({
           />
 
           {/* Delete kit */}
-          {isOwner && (
+          {isOwner && !kit.is_system && (
             <div className="mt-12 pt-5 border-t border-[#0F2240]/8">
               <DeleteKitButton kitId={kitId} redirectTo={`/${username}`} />
             </div>

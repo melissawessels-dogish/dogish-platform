@@ -18,10 +18,11 @@ type PlaceOption = {
   lat: number | null
   lng: number | null
   website: string | null
+  cover_image?: string | null
 }
 
 export interface PlacePickerProps {
-  onPlaceSelect: (place: { id: string; name: string; city: string; state: string }) => void
+  onPlaceSelect: (place: { id: string; name: string; city: string; state: string; cover_image?: string | null }) => void
   placeholder?: string
   className?: string
 }
@@ -37,7 +38,7 @@ export default function PlacePicker({
   const [options, setOptions] = useState<PlaceOption[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [selected, setSelected] = useState<{ id: string; name: string; city: string; state: string } | null>(null)
+  const [selected, setSelected] = useState<{ id: string; name: string; city: string; state: string; cover_image?: string | null } | null>(null)
 
   const containerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -109,22 +110,29 @@ export default function PlacePicker({
       // Check for existing record by google_place_id
       const { data: existing } = await supabase
         .from('place')
-        .select('id, name, city, state')
+        .select('id, name, city, state, cover_image')
         .eq('google_place_id', option.place_id)
         .maybeSingle()
 
       if (existing) {
         let city = existing.city ?? ''
         let state = existing.state ?? ''
+        let cover_image: string | null = existing.cover_image ?? null
+        const updates: Record<string, string | null> = {}
         if (!existing.city && (resolved.city || resolved.state)) {
-          await supabase
-            .from('place')
-            .update({ city: resolved.city ?? null, state: resolved.state ?? null })
-            .eq('id', existing.id)
+          updates.city = resolved.city ?? null
+          updates.state = resolved.state ?? null
           city = resolved.city ?? ''
           state = resolved.state ?? ''
         }
-        const result = { id: existing.id, name: existing.name, city, state }
+        if (!existing.cover_image && resolved.cover_image) {
+          updates.cover_image = resolved.cover_image ?? null
+          cover_image = resolved.cover_image
+        }
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('place').update(updates).eq('id', existing.id)
+        }
+        const result = { id: existing.id, name: existing.name, city, state, cover_image }
         setSelected(result)
         setQuery('')
         onPlaceSelect(result)
@@ -144,8 +152,9 @@ export default function PlacePicker({
           lng: resolved.lng ?? null,
           website: resolved.website ?? null,
           google_place_id: option.place_id,
+          cover_image: resolved.cover_image ?? null,
         })
-        .select('id, name, city, state')
+        .select('id, name, city, state, cover_image')
         .single()
 
       if (error || !inserted) {
@@ -154,7 +163,7 @@ export default function PlacePicker({
         return
       }
 
-      const result = { id: inserted.id, name: inserted.name, city: inserted.city ?? '', state: inserted.state ?? '' }
+      const result = { id: inserted.id, name: inserted.name, city: inserted.city ?? '', state: inserted.state ?? '', cover_image: inserted.cover_image ?? null }
       setSelected(result)
       setQuery('')
       onPlaceSelect(result)
